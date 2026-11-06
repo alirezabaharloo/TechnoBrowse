@@ -16,13 +16,13 @@ const server = await createServer({
 try {
   const { default: App } = await server.ssrLoadModule('/src/App.jsx');
   const appHtml = renderToString(React.createElement(App));
-  if (!appHtml.includes('Techno')) throw new Error('App render missing brand markup');
-  console.log(`PASS  dashboard <App/> rendered (${appHtml.length} bytes)`);
+  if (!appHtml.includes('تکنو')) throw new Error('رندر داشبورد فاقد محتوای برند است');
+  console.log(`PASS  داشبورد <App/> رندر شد (${appHtml.length} بایت)`);
 
   const { default: BrowserChrome } = await server.ssrLoadModule('/src/browser/BrowserChrome.jsx');
   const chromeHtml = renderToString(React.createElement(BrowserChrome));
-  if (!chromeHtml.includes('Address bar')) throw new Error('BrowserChrome render missing address bar');
-  console.log(`PASS  <BrowserChrome/> rendered (${chromeHtml.length} bytes)`);
+  if (!chromeHtml.includes('نوار نشانی')) throw new Error('رندر نوار ابزار فاقد نوار نشانی است');
+  console.log(`PASS  <BrowserChrome/> رندر شد (${chromeHtml.length} بایت)`);
 
   process.exitCode = 0;
 } catch (error) {

@@ -25,9 +25,9 @@ const EMPTY_PAGE = {
 };
 
 /**
- * The toolbar of a profile browser window.
- * The actual web content is rendered by a WebContentsView positioned by the
- * main process just below this toolbar, using THIS profile's session partition.
+ * نوار ابزار پنجرهٔ مرورگر پروفایل.
+ * محتوای وب توسط WebContentsView که زیر همین نوار قرار می‌گیرد، با نشست مخصوص
+ * همین پروفایل رندر می‌شود.
  */
 export default function BrowserChrome() {
   const api = useMemo(() => chromeBridge(), []);
@@ -42,7 +42,7 @@ export default function BrowserChrome() {
   const [toast, setToast] = useState(null); // { message, tone }
   const [crashed, setCrashed] = useState(false);
 
-  // ── Tell the main process how tall the toolbar is (it positions the page view) ──
+  // ── به پردازش اصلی می‌گوییم نوار ابزار چند پیکسل ارتفاع دارد (او محل نمایش صفحه را تنظیم می‌کند) ──
   useEffect(() => {
     if (!api || !toolbarRef.current) return undefined;
     const el = toolbarRef.current;
@@ -60,7 +60,7 @@ export default function BrowserChrome() {
     };
   }, [api]);
 
-  // ── Wire up main-process events ──
+  // ── رویدادهای پردازش اصلی ──
   useEffect(() => {
     if (!api) return undefined;
     let mounted = true;
@@ -82,17 +82,17 @@ export default function BrowserChrome() {
     };
   }, [api]);
 
-  // ── Keep the address bar in sync unless the user is editing it ──
+  // ── همگام‌سازی نوار نشانی با صفحهٔ جاری (مگر اینکه کاربر در حال تایپ باشد) ──
   useEffect(() => {
     if (!inputFocused) setInputValue(page.displayUrl || '');
   }, [page.displayUrl, inputFocused]);
 
-  // A fresh navigation dismisses the crash banner
+  // ناوبری تازه نوار خطای کرش را می‌بندد
   useEffect(() => {
     if (page.isLoading) setCrashed(false);
   }, [page.isLoading]);
 
-  // Toast auto-dismiss
+  // پنهان‌سازی خودکار اعلان
   useEffect(() => {
     if (!toast) return undefined;
     const timer = window.setTimeout(() => setToast(null), 4600);
@@ -105,7 +105,7 @@ export default function BrowserChrome() {
     if (!value) return;
     const result = await api.navigate(value);
     if (result && result.ok === false) {
-      setToast({ message: result.error || 'That address could not be loaded.', tone: 'error' });
+      setToast({ message: result.error || 'بارگذاری این نشانی ممکن نشد.', tone: 'error' });
       urlInputRef.current?.select();
     } else {
       urlInputRef.current?.blur();
@@ -118,7 +118,7 @@ export default function BrowserChrome() {
   const goHome = useCallback(() => api?.goHome(), [api]);
   const toggleDevTools = useCallback(() => api?.toggleDevTools(), [api]);
 
-  // ── Keyboard shortcuts ──
+  // ── میانبرهای صفحه‌کلید ──
   useEffect(() => {
     const onKeyDown = (event) => {
       const mod = event.ctrlKey || event.metaKey;
@@ -133,10 +133,10 @@ export default function BrowserChrome() {
       } else if (event.key === 'F12' || (mod && event.shiftKey && (key === 'i' || key === 'c'))) {
         event.preventDefault();
         api?.toggleDevTools();
-      } else if (event.altKey && event.key === 'ArrowLeft') {
-        event.preventDefault();
-        api?.goBack();
       } else if (event.altKey && event.key === 'ArrowRight') {
+        event.preventDefault();
+        api?.goBack(); // در رابط راست‌چین: بازگشت رو به «راست» است
+      } else if (event.altKey && event.key === 'ArrowLeft') {
         event.preventDefault();
         api?.goForward();
       }
@@ -153,58 +153,59 @@ export default function BrowserChrome() {
   }, [page.displayUrl]);
 
   const iconButton =
-    'flex h-9 w-9 items-center justify-center rounded-lg text-slate-300 transition hover:bg-white/[0.06] hover:text-white active:scale-95 disabled:pointer-events-none disabled:opacity-25';
+    'flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-900/5 hover:text-slate-900 active:scale-95 disabled:pointer-events-none disabled:opacity-30';
 
   return (
-    <div className="flex h-screen select-none flex-col overflow-hidden bg-[#0e1730] text-slate-200">
-      {/* ══ Measured toolbar (main process reads its height) ══ */}
-      <div ref={toolbarRef} className="relative shrink-0 border-b border-black/60 bg-gradient-to-b from-[#141f38] to-[#101a30] shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]">
-        {/* Nav row */}
+    <div className="flex h-screen select-none flex-col overflow-hidden bg-[#eef1f8] text-slate-700">
+      {/* ══ نوار ابزار (ارتفاعش توسط پردازش اصلی خوانده می‌شود) ══ */}
+      <div ref={toolbarRef} className="relative shrink-0 border-b border-slate-900/10 bg-gradient-to-b from-white to-[#eef1f8] shadow-[0_1px_0_rgba(255,255,255,0.7)_inset]">
+        {/* ردیف ناوبری */}
         <div className="relative flex h-14 items-center gap-1 px-2">
-          {/* Profile isolation chip */}
+          {/* چیپ ایزولهٔ پروفایل */}
           {profile && (
             <div
-              className="mr-1 hidden h-9 max-w-[150px] select-none items-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/[0.08] px-2 sm:flex"
-              title={`Isolated session · persist:profile-${profile.id}\nCookies, storage, cache and logins are private to this profile.`}
+              className="me-1 hidden h-9 max-w-[160px] select-none items-center gap-2 rounded-lg border border-accent-600/20 bg-accent-600/[0.08] px-2 sm:flex"
+              title={`نشست ایزوله · persist:profile-${profile.id}\nکوکی‌ها، حافظه و کش این پروفایل خصوصی است.`}
             >
               <span
-                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-gradient-to-br text-[8px] font-bold text-ink-900 ${
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-gradient-to-br text-[8px] font-bold text-white ${
                   AVATAR_STYLES[profile.color] ?? AVATAR_STYLES.blue
                 }`}
               >
                 {initialsFor(profile.name)}
               </span>
-              <span className="truncate text-[11px] font-semibold text-blue-200/90">{profile.name}</span>
-              <ShieldCheck size={12} className="shrink-0 text-blue-400" />
+              <span className="truncate text-[11px] font-bold text-accent-600">{profile.name}</span>
+              <ShieldCheck size={12} className="shrink-0 text-accent-600" />
             </div>
           )}
 
-          {/* Navigation cluster */}
-          <button onClick={goBack} disabled={!page.canGoBack} className={iconButton} title="Back (Alt+←)" aria-label="Back">
-            <ChevronLeft size={19} strokeWidth={2.2} />
-          </button>
-          <button onClick={goForward} disabled={!page.canGoForward} className={iconButton} title="Forward (Alt+→)" aria-label="Forward">
+          {/* دکمه‌های ناوبری (در رابط راست‌چین: بازگشت → | جلو ←) */}
+          <button onClick={goBack} disabled={!page.canGoBack} className={iconButton} title="بازگشت (Alt+→)" aria-label="بازگشت">
             <ChevronRight size={19} strokeWidth={2.2} />
           </button>
-          <button onClick={reload} className={iconButton} title="Reload (Ctrl+R)" aria-label="Reload">
+          <button onClick={goForward} disabled={!page.canGoForward} className={iconButton} title="جلو (Alt+←)" aria-label="جلو">
+            <ChevronLeft size={19} strokeWidth={2.2} />
+          </button>
+          <button onClick={reload} className={iconButton} title="بارگذاری مجدد (Ctrl+R)" aria-label="بارگذاری مجدد">
             {page.isLoading ? (
-              <Loader2 size={16} className="animate-spin text-blue-400" />
+              <Loader2 size={16} className="animate-spin text-accent-600" />
             ) : (
               <RotateCw size={16} strokeWidth={2.2} />
             )}
           </button>
-          <button onClick={goHome} className={iconButton} title="TechnoBrowse Start page" aria-label="Home">
+          <button onClick={goHome} className={iconButton} title="صفحهٔ شروع تکنوبروز" aria-label="خانه">
             <Home size={16} strokeWidth={2.2} />
           </button>
 
-          {/* Address bar */}
+          {/* نوار نشانی (نشانی همیشه چپ‌چین) */}
           <div
-            className="mx-1 flex h-9 min-w-0 flex-1 items-center gap-2 rounded-full border border-white/[0.07] bg-[#070d1d] px-3.5 transition
-              focus-within:border-blue-500/50 focus-within:shadow-[0_0_0_3px_rgba(59,130,246,0.18)]"
+            className="mx-1 flex h-9 min-w-0 flex-1 items-center gap-2 rounded-full border border-slate-900/10 bg-white px-3.5 shadow-sm transition
+              focus-within:border-accent-600/50 focus-within:shadow-[0_0_0_3px_rgba(37,99,235,0.15)]"
           >
-            <SchemeIcon size={13} className="shrink-0 text-slate-500" aria-hidden="true" />
+            <SchemeIcon size={13} className="shrink-0 text-slate-400" aria-hidden="true" />
             <input
               ref={urlInputRef}
+              dir="ltr"
               value={inputValue}
               onChange={(event) => setInputValue(event.target.value)}
               onFocus={() => {
@@ -226,9 +227,9 @@ export default function BrowserChrome() {
               autoCapitalize="off"
               autoCorrect="off"
               inputMode="url"
-              aria-label="Address bar"
-              placeholder="Search Google or type a URL"
-              className="h-full min-w-0 flex-1 bg-transparent text-[13px] text-slate-100 placeholder-slate-600 outline-none"
+              aria-label="نوار نشانی"
+              placeholder="جستجو در گوگل یا نشانی اینترنتی بنویسید"
+              className="h-full min-w-0 flex-1 bg-transparent text-left text-[13px] text-slate-800 placeholder-slate-400 outline-none"
             />
             {inputFocused && inputValue && (
               <button
@@ -236,66 +237,66 @@ export default function BrowserChrome() {
                   setInputValue('');
                   urlInputRef.current?.focus();
                 }}
-                className="shrink-0 rounded-full p-0.5 text-slate-500 transition hover:text-slate-200"
-                aria-label="Clear address bar"
-                title="Clear"
+                className="shrink-0 rounded-full p-0.5 text-slate-400 transition hover:text-slate-700"
+                aria-label="پاک کردن نوار نشانی"
+                title="پاک کردن"
               >
                 <X size={14} />
               </button>
             )}
           </div>
 
-          {/* DevTools */}
-          <button onClick={toggleDevTools} className={iconButton} title="Toggle Developer Tools (F12)" aria-label="Toggle developer tools">
+          {/* ابزارهای توسعه‌دهنده */}
+          <button onClick={toggleDevTools} className={iconButton} title="ابزارهای توسعه‌دهنده (F12)" aria-label="ابزارهای توسعه‌دهنده">
             <Code2 size={17} strokeWidth={2} />
           </button>
         </div>
 
-        {/* Loading progress hairline */}
+        {/* خط پیشرفت بارگذاری */}
         {page.isLoading && (
           <div className="loading-bar">
             <span />
           </div>
         )}
 
-        {/* Crash banner (part of measured toolbar, so the page view is pushed down) */}
+        {/* نوار خطای کرش (بخشی از ارتفاع نوار ابزار است تا صفحه زیرش قرار بگیرد) */}
         {crashed && (
-          <div className="flex h-11 items-center justify-center gap-3 border-t border-rose-500/20 bg-rose-600/95 px-3 text-white">
+          <div className="flex h-11 items-center justify-center gap-3 border-t border-rose-200 bg-rose-600 px-3 text-white">
             <TriangleAlert size={15} className="shrink-0" />
-            <p className="truncate text-[12px] font-medium">This page crashed. Your profile data is safe.</p>
+            <p className="truncate text-[12px] font-medium">این صفحه از کار افتاد. داده‌های پروفایل شما محفوظ است.</p>
             <button
               onClick={() => {
                 setCrashed(false);
                 reload();
               }}
-              className="shrink-0 rounded-md border border-white/40 px-2.5 py-1 text-[11px] font-semibold transition hover:bg-white/15"
+              className="shrink-0 rounded-md border border-white/50 px-2.5 py-1 text-[11px] font-semibold transition hover:bg-white/15"
             >
-              Reload page
+              بارگذاری دوباره
             </button>
           </div>
         )}
 
-        {/* Transient error toast (inside the measured area so the page view never covers it) */}
+        {/* اعلان موقت خطا (داخل ناحیهٔ اندازه‌گیری‌شده تا صفحه رویش نیاید) */}
         {toast && (
-          <div className="flex h-9 items-center justify-center gap-2 border-t border-white/[0.06] bg-[#131e33] px-3 text-[11.5px] text-amber-200/90">
-            <TriangleAlert size={13} className="shrink-0 text-amber-400" />
+          <div className="flex h-9 items-center justify-center gap-2 border-t border-slate-900/5 bg-amber-50 px-3 text-[11.5px] text-amber-800">
+            <TriangleAlert size={13} className="shrink-0 text-amber-500" />
             <span className="truncate">{toast.message}</span>
-            <button onClick={() => setToast(null)} className="shrink-0 rounded p-0.5 text-slate-500 transition hover:text-slate-200" aria-label="Dismiss">
+            <button onClick={() => setToast(null)} className="shrink-0 rounded p-0.5 text-amber-500 transition hover:text-amber-800" aria-label="بستن اعلان">
               <X size={13} />
             </button>
           </div>
         )}
 
-        {/* Plain-browser preview notice (vite dev / preview only) */}
+        {/* اعلان حالت پیش‌نمایش (فقط خارج از اپلیکیشن دسکتاپ) */}
         {!api && (
-          <div className="flex h-9 items-center justify-center border-t border-amber-500/20 bg-amber-500/10 px-3 text-[11px] font-medium text-amber-300">
-            Preview mode — the toolbar is connected to a real profile only inside the TechnoBrowse desktop app.
+          <div className="flex h-9 items-center justify-center border-t border-amber-300 bg-amber-100 px-3 text-[11px] font-medium text-amber-800">
+            حالت پیش‌نمایش — نوار ابزار فقط داخل اپلیکیشن دسکتاپ تکنوبروز به پروفایل واقعی متصل می‌شود.
           </div>
         )}
       </div>
 
-      {/* The page area below is rendered by the profile's WebContentsView (mounted by the main process). */}
-      <div className="relative flex-1 bg-[#0b1220]" aria-hidden="true" />
+      {/* ناحیهٔ صفحه — توسط WebContentsView پروفایل (که پردازش اصلی نصب می‌کند) رندر می‌شود. */}
+      <div className="relative flex-1 bg-[#eef1f8]" aria-hidden="true" />
     </div>
   );
 }

@@ -105,8 +105,8 @@ function createDashboardWindow() {
     minWidth: 960,
     minHeight: 640,
     show: false,
-    backgroundColor: '#0b1220',
-    title: 'TechnoBrowse',
+    backgroundColor: '#eef1f8',
+    title: 'تکنوبروز',
     autoHideMenuBar: true,
     ...(APP_ICON ? { icon: APP_ICON } : {}),
     webPreferences: baseWebPreferences(path.join(__dirname, 'preload.js')),
@@ -138,8 +138,8 @@ function createProfileWindow(profile) {
     minWidth: 940,
     minHeight: 600,
     show: false,
-    backgroundColor: '#0b1220',
-    title: `${profile.name} · TechnoBrowse`,
+    backgroundColor: '#eef1f8',
+    title: `${profile.name} · تکنوبروز`,
     autoHideMenuBar: true,
     ...(APP_ICON ? { icon: APP_ICON } : {}),
     webPreferences: baseWebPreferences(path.join(__dirname, 'chromePreload.js')),
@@ -160,7 +160,7 @@ function createProfileWindow(profile) {
       spellcheck: true,
     },
   });
-  view.setBackgroundColor('#0b1220');
+  view.setBackgroundColor('#eef1f8');
   win.contentView.addChildView(view);
 
   const record = {
@@ -222,9 +222,9 @@ function createProfilePopup(profile, { url, features }) {
     ...(popupFeatures.y !== undefined ? { y: popupFeatures.y } : {}),
     minWidth: 320,
     minHeight: 240,
-    title: 'TechnoBrowse',
+    title: 'تکنوبروز',
     autoHideMenuBar: true,
-    backgroundColor: '#0b1220',
+    backgroundColor: '#eef1f8',
     ...(APP_ICON ? { icon: APP_ICON } : {}),
     webPreferences: {
       ...baseWebPreferences(), // bare OAuth popup: no app APIs exposed to websites
@@ -285,7 +285,7 @@ function attachNavigationGuards(contents, profile) {
     if (!isAllowedNavigation(url, startPageFileUrl)) {
       event.preventDefault();
       notifyChrome(contents, 'chrome:toast', {
-        message: 'That link was blocked because it uses an unsupported URL scheme.',
+        message: 'این پیوند مسدود شد چون از یک شمای نشانی پشتیبانی‌نشده استفاده می‌کند.',
         tone: 'error',
       });
     }
@@ -322,7 +322,7 @@ function attachStateForwarding(contents, record) {
     send();
     try {
       record.win.webContents.send('chrome:toast', {
-        message: `Couldn't load page (${errorDescription || errorCode}). Check the address and your connection.`,
+        message: `بارگذاری صفحه ممکن نشد (${errorDescription || errorCode}). نشانی و اتصال خود را بررسی کنید.`,
         tone: 'error',
       });
     } catch {
@@ -356,7 +356,7 @@ function sendChromeState(record) {
       canGoForward,
     });
     const pageTitle = contents.getTitle();
-    record.win.setTitle(pageTitle ? `${pageTitle} · ${record.profile.name} — TechnoBrowse` : `${record.profile.name} — TechnoBrowse`);
+    record.win.setTitle(pageTitle ? `${pageTitle} · ${record.profile.name} — تکنوبروز` : `${record.profile.name} — تکنوبروز`);
   } catch {
     /* window mid-teardown */
   }
@@ -498,7 +498,7 @@ function registerDashboardIpc() {
 
   ipcMain.handle('profiles:delete', async (_event, payload) => {
     const id = String(payload?.id ?? '');
-    if (!/^[a-z0-9-]{4,64}$/i.test(id)) throw new Error('Invalid profile id.');
+    if (!/^[a-z0-9-]{4,64}$/i.test(id)) throw new Error('شناسهٔ پروفایل نامعتبر است.');
     await deleteProfileCompletely(id);
     broadcastProfilesChanged();
     return { ok: true };
@@ -507,7 +507,7 @@ function registerDashboardIpc() {
   ipcMain.handle('profiles:open', async (_event, payload) => {
     const id = String(payload?.id ?? '');
     const profile = await store.get(id);
-    if (!profile) throw new Error('Profile not found. It may have been deleted.');
+    if (!profile) throw new Error('پروفایل یافت نشد. شاید حذف شده باشد.');
     const result = createProfileWindow(profile);
     broadcastProfilesChanged();
     return result;
@@ -531,7 +531,7 @@ function registerDashboardIpc() {
       const error = await shell.openPath(storage.dataRoot);
       return error ? { error } : { ok: true };
     } catch (error) {
-      return { error: error?.message || 'Could not open the data folder.' };
+      return { error: error?.message || 'باز کردن پوشهٔ داده ممکن نشد.' };
     }
   });
 }
@@ -551,7 +551,7 @@ function recordFromChromeSender(sender) {
 function registerChromeIpc() {
   ipcMain.handle('chrome:ready', async (event) => {
     const record = recordFromChromeSender(event.sender);
-    if (!record) throw new Error('This toolbar is not attached to a profile.');
+    if (!record) throw new Error('این نوار ابزار به پروفایلی متصل نیست.');
     sendChromeState(record);
     return {
       id: record.profile.id,
@@ -564,7 +564,7 @@ function registerChromeIpc() {
 
   ipcMain.handle('chrome:navigate', async (event, payload) => {
     const record = recordFromChromeSender(event.sender);
-    if (!record) return { ok: false, error: 'No profile window attached.' };
+    if (!record) return { ok: false, error: 'پنجرهٔ پروفایلی متصل نیست.' };
     const normalized = normalizeUserUrl(payload?.input ?? '');
     if (!normalized.ok) return normalized;
     try {
@@ -572,7 +572,7 @@ function registerChromeIpc() {
       sendChromeState(record);
       return { ok: true, url: normalized.url, isSearch: normalized.isSearch === true };
     } catch (error) {
-      return { ok: false, error: error?.message || 'Navigation failed.' };
+      return { ok: false, error: error?.message || 'ناوبری انجام نشد.' };
     }
   });
 

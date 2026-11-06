@@ -68,8 +68,8 @@ function resolveDataRoot(app) {
   }
 
   throw new Error(
-    'TechnoBrowse cannot find a writable data directory. ' +
-      'Move the portable app to a writable folder (e.g. your Desktop or an external drive) and try again.'
+    'تکنوبروز نتوانست پوشهٔ دادهٔ قابل‌نوشتنی پیدا کند. ' +
+      'نسخهٔ پرتابل را به پوشه‌ای قابل‌نوشتن (مثلاً دسکتاپ یا یک درایو اکسترنال) منتقل کنید و دوباره تلاش کنید.'
   );
 }
 
