@@ -43,6 +43,8 @@ npm start       # vite build + electron .
 | `npm run dom-check` | Drives the dashboard UI with jsdom — create/validate/delete flow end-to-end |
 | `npm run dom-check:chrome` | Drives the toolbar UI with a mocked Electron bridge — navigation, buttons, loading state |
 | `npm run check` | Runs every check above plus a production build |
+| `npm run preview` | Serve the production build on port 4173 (demo mode in plain browsers) |
+| `npm run visual-check` | Screenshot dashboard/toolbar/start page with headless Chromium (needs `npm run preview` running) |
 | `npm run dist` | **Build the Windows x64 portable executable** into `release/` |
 | `npm run dist:dir` | Build an unpacked Windows app directory (faster, for debugging) |
 
