@@ -8,6 +8,7 @@
 - **True isolation** — each profile gets its own persistent Chromium session via `session.fromPartition('persist:profile-<id>')`.
 - **Persistent** — logins survive window closes, app restarts, and portable-app updates.
 - **Local-only** — `profiles.json` (metadata) plus Chromium partition directories. No telemetry, no sync, no passwords ever stored.
+- **Dark & light themes** — toggle from the header (or the toolbar) in one click; the choice is remembered. The app ships in both, with the TechnoWin look in either mode.
 
 ---
 

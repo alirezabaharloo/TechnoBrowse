@@ -5,9 +5,11 @@ import {
   FolderOpen,
   Plus,
   ShieldCheck,
+  Sparkles,
   Users,
 } from 'lucide-react';
 import { nativeBridge } from './lib/profileUtils';
+import ThemeToggle from './components/ThemeToggle';
 import ProfileCard from './components/ProfileCard';
 import ProfileFormModal from './components/ProfileFormModal';
 import DeleteProfileModal from './components/DeleteProfileModal';
@@ -149,17 +151,31 @@ export default function App() {
       <div className="app-grid pointer-events-none absolute inset-0" />
 
       {/* ───────────────────────── سربرگ ───────────────────────── */}
-      <header className="relative z-10 flex h-16 shrink-0 items-center justify-between border-b border-white/10 bg-ink-900/75 px-6 backdrop-blur">
+      <header className="relative z-10 flex h-16 shrink-0 items-center justify-between border-b border-tint-line bg-ink-900 px-6 backdrop-blur">
+        {/* ── اعتبار ساخت: تیم TechnoWin ── */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 select-none items-center gap-2.5 xl:flex"
+        >
+          <span className="h-px w-10 bg-gradient-to-l from-transparent to-[rgba(61,139,255,0.55)]" />
+          <Sparkles size={12} className="text-accent-400" />
+          <span className="bg-gradient-to-l from-accent-400 via-accent-500 to-accent-600 bg-clip-text text-[11.5px] font-extrabold tracking-[0.08em] text-transparent">
+            ساخته شده توسط تیم TechnoWin
+          </span>
+          <Sparkles size={12} className="text-accent-400" />
+          <span className="h-px w-10 bg-gradient-to-r from-transparent to-[rgba(61,139,255,0.55)]" />
+        </div>
+
         <div className="flex items-center gap-3">
           <img
             src="./technowin.png"
-            alt="نشان تکنوبروز"
+            alt="نشان TechnoBrowse"
             className="h-10 w-10 select-none rounded-xl shadow-[0_6px_18px_rgba(15,23,42,0.35)]"
             draggable={false}
           />
           <div className="leading-tight">
             <h1 className="text-[17px] font-extrabold tracking-tight text-slate-100">
-              تکنو<span className="text-accent-400">بروز</span>
+              Techno<span className="text-accent-400">Browse</span>
             </h1>
             <p className="text-[9.5px] font-semibold uppercase tracking-[0.2em] text-slate-400">
               مرورگر ایزولهٔ چندپروفایلی
@@ -168,12 +184,13 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-2.5">
+          <ThemeToggle className="h-10 w-10 rounded-xl" />
           {info?.portable && (
-            <span className="hidden rounded-full border border-accent-400/25 bg-accent-400/10 px-3 py-1 text-[10.5px] font-bold tracking-wider text-accent-400 sm:inline-block">
+            <span className="hidden rounded-full border border-[rgba(61,139,255,0.25)] bg-[rgba(61,139,255,0.1)] px-3 py-1 text-[10.5px] font-bold tracking-wider text-accent-400 sm:inline-block">
               نسخهٔ پرتابل
             </span>
           )}
-          <span className="hidden items-center gap-1.5 rounded-full border border-white/10 bg-ink-800 px-3 py-1.5 text-[11px] font-medium text-slate-300 shadow-sm md:inline-flex">
+          <span className="hidden items-center gap-1.5 rounded-full border border-tint-line bg-ink-800 px-3 py-1.5 text-[11px] font-medium text-slate-300 shadow-sm md:inline-flex">
             <Users size={12} />
             {`${profiles.length.toLocaleString('fa-IR')} پروفایل`}
           </span>
@@ -194,9 +211,9 @@ export default function App() {
       <main className="relative z-10 flex-1 overflow-y-auto">
         <div className="mx-auto max-w-6xl px-6 pb-8 pt-6">
           {/* بنر ایزوله‌سازی */}
-          <section className="mb-6 flex flex-col gap-3 rounded-2xl border border-accent-400/20 bg-gradient-to-l from-blue-500/15 via-ink-850 to-ink-850 p-4 shadow-sm md:flex-row md:items-center md:gap-4">
+          <section className="mb-6 flex flex-col gap-3 rounded-2xl border border-[rgba(61,139,255,0.2)] bg-gradient-to-l from-blue-500/15 via-ink-850 to-ink-850 p-4 shadow-sm md:flex-row md:items-center md:gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-accent-400/25 bg-accent-400/10">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[rgba(61,139,255,0.25)] bg-[rgba(61,139,255,0.1)]">
                 <ShieldCheck size={22} className="text-accent-400" />
               </div>
               <div>
@@ -208,13 +225,13 @@ export default function App() {
             </div>
             {info?.dataRoot && (
               <div className="flex items-center gap-1.5 ms-auto" dir="ltr">
-                <code className="max-w-[220px] truncate rounded-lg border border-white/10 bg-ink-850 px-2 py-1.5 font-mono text-[10px] text-slate-400" title={info.dataRoot}>
+                <code className="max-w-[220px] truncate rounded-lg border border-tint-line bg-ink-850 px-2 py-1.5 font-mono text-[10px] text-slate-400" title={info.dataRoot}>
                   {info.dataRoot}
                 </code>
-                <button onClick={copyDataRoot} className="rounded-lg p-2 text-slate-400 transition hover:bg-ink-800/5 hover:text-slate-200" title="کپی مسیر پوشهٔ داده" aria-label="کپی مسیر پوشهٔ داده">
-                  {copiedPath ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                <button onClick={copyDataRoot} className="rounded-lg p-2 text-slate-400 transition hover:bg-tint-fill hover:text-slate-200" title="کپی مسیر پوشهٔ داده" aria-label="کپی مسیر پوشهٔ داده">
+                  {copiedPath ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
                 </button>
-                <button onClick={openDataRoot} className="rounded-lg p-2 text-slate-400 transition hover:bg-ink-800/5 hover:text-slate-200" title="باز کردن پوشهٔ داده" aria-label="باز کردن پوشهٔ داده">
+                <button onClick={openDataRoot} className="rounded-lg p-2 text-slate-400 transition hover:bg-tint-fill hover:text-slate-200" title="باز کردن پوشهٔ داده" aria-label="باز کردن پوشهٔ داده">
                   <FolderOpen size={14} />
                 </button>
               </div>
@@ -225,7 +242,7 @@ export default function App() {
           {loading ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {[0, 1, 2].map((n) => (
-                <div key={n} className="shimmer h-56 rounded-2xl border border-white/[0.06] bg-ink-850/70" />
+                <div key={n} className="shimmer h-56 rounded-2xl border border-tint-line bg-ink-850" />
               ))}
             </div>
           ) : profiles.length === 0 ? (
@@ -248,8 +265,8 @@ export default function App() {
       </main>
 
       {/* ───────────────────────── پاورقی ───────────────────────── */}
-      <footer className="relative z-10 flex h-8 shrink-0 items-center justify-center gap-2 border-t border-white/5 bg-ink-850/70 text-[10.5px] text-slate-400">
-        <span>تکنوبروز نسخهٔ {info?.version ?? '۱.۰.۰'}</span>
+      <footer className="relative z-10 flex h-8 shrink-0 items-center justify-center gap-2 border-t border-tint-line bg-ink-850 text-[10.5px] text-slate-400">
+        <span>TechnoBrowse نسخهٔ {info?.version ?? '۱.۰.۰'}</span>
         <span className="text-slate-600">•</span>
         <span>تمام داده‌ها روی همین رایانه ذخیره می‌شود</span>
         <span className="text-slate-600">•</span>
@@ -273,12 +290,12 @@ export default function App() {
 
 function EmptyState({ onCreate }) {
   return (
-    <div className="flex animate-fade-in flex-col items-center justify-center rounded-2xl border border-dashed border-slate-700 bg-ink-850/60 px-6 py-20 text-center">
+    <div className="flex animate-fade-in flex-col items-center justify-center rounded-2xl border border-dashed border-slate-700 bg-ink-850 px-6 py-20 text-center">
       <div className="relative mb-6">
         <div className="absolute inset-0 -m-4 animate-pulse rounded-full bg-blue-500/15 blur-2xl" />
         <img
           src="./technowin.png"
-          alt="نشان تکنوبروز"
+          alt="نشان TechnoBrowse"
           className="relative h-20 w-20 select-none rounded-2xl shadow-[0_16px_40px_rgba(15,23,42,0.35)]"
           draggable={false}
         />
