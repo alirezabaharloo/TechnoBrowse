@@ -11,18 +11,18 @@ export default function Toasts({ toasts, dismiss }) {
         <div
           key={toast.id}
           role="status"
-          className="pointer-events-auto flex items-start gap-2.5 rounded-xl border border-slate-900/10 bg-white/95 px-3.5 py-2.5 shadow-card backdrop-blur
+          className="pointer-events-auto flex items-start gap-2.5 rounded-xl border border-white/10 bg-ink-800/95 px-3.5 py-2.5 shadow-card backdrop-blur
             animate-slide-up"
         >
           {toast.tone === 'error' ? (
             <Info size={16} className="mt-0.5 shrink-0 text-rose-500" />
           ) : (
-            <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-600" />
+            <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-400" />
           )}
-          <p className="flex-1 text-[13px] leading-6 text-slate-700">{toast.message}</p>
+          <p className="flex-1 text-[13px] leading-6 text-slate-200">{toast.message}</p>
           <button
             onClick={() => dismiss(toast.id)}
-            className="rounded-md p-0.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+            className="rounded-md p-0.5 text-slate-500 transition hover:bg-ink-800/5 hover:text-slate-300"
             aria-label="بستن اعلان"
           >
             <X size={14} />

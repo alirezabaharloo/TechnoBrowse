@@ -149,7 +149,7 @@ export default function App() {
       <div className="app-grid pointer-events-none absolute inset-0" />
 
       {/* ───────────────────────── سربرگ ───────────────────────── */}
-      <header className="relative z-10 flex h-16 shrink-0 items-center justify-between border-b border-slate-900/10 bg-white/75 px-6 backdrop-blur">
+      <header className="relative z-10 flex h-16 shrink-0 items-center justify-between border-b border-white/10 bg-ink-900/75 px-6 backdrop-blur">
         <div className="flex items-center gap-3">
           <img
             src="./technowin.png"
@@ -158,10 +158,10 @@ export default function App() {
             draggable={false}
           />
           <div className="leading-tight">
-            <h1 className="text-[17px] font-extrabold tracking-tight text-slate-800">
-              تکنو<span className="text-accent-600">بروز</span>
+            <h1 className="text-[17px] font-extrabold tracking-tight text-slate-100">
+              تکنو<span className="text-accent-400">بروز</span>
             </h1>
-            <p className="text-[9.5px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+            <p className="text-[9.5px] font-semibold uppercase tracking-[0.2em] text-slate-400">
               مرورگر ایزولهٔ چندپروفایلی
             </p>
           </div>
@@ -169,11 +169,11 @@ export default function App() {
 
         <div className="flex items-center gap-2.5">
           {info?.portable && (
-            <span className="hidden rounded-full border border-accent-600/25 bg-accent-600/10 px-3 py-1 text-[10.5px] font-bold tracking-wider text-accent-600 sm:inline-block">
+            <span className="hidden rounded-full border border-accent-400/25 bg-accent-400/10 px-3 py-1 text-[10.5px] font-bold tracking-wider text-accent-400 sm:inline-block">
               نسخهٔ پرتابل
             </span>
           )}
-          <span className="hidden items-center gap-1.5 rounded-full border border-slate-900/10 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-600 shadow-sm md:inline-flex">
+          <span className="hidden items-center gap-1.5 rounded-full border border-white/10 bg-ink-800 px-3 py-1.5 text-[11px] font-medium text-slate-300 shadow-sm md:inline-flex">
             <Users size={12} />
             {`${profiles.length.toLocaleString('fa-IR')} پروفایل`}
           </span>
@@ -194,27 +194,27 @@ export default function App() {
       <main className="relative z-10 flex-1 overflow-y-auto">
         <div className="mx-auto max-w-6xl px-6 pb-8 pt-6">
           {/* بنر ایزوله‌سازی */}
-          <section className="mb-6 flex flex-col gap-3 rounded-2xl border border-accent-600/20 bg-gradient-to-l from-blue-500/10 via-white to-white p-4 shadow-sm md:flex-row md:items-center md:gap-4">
+          <section className="mb-6 flex flex-col gap-3 rounded-2xl border border-accent-400/20 bg-gradient-to-l from-blue-500/15 via-ink-850 to-ink-850 p-4 shadow-sm md:flex-row md:items-center md:gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-accent-600/25 bg-accent-600/10">
-                <ShieldCheck size={22} className="text-accent-600" />
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-accent-400/25 bg-accent-400/10">
+                <ShieldCheck size={22} className="text-accent-400" />
               </div>
               <div>
-                <p className="text-[13px] font-bold text-slate-800">ایزوله‌سازی واقعی پروفایل‌ها</p>
-                <p className="text-[11.5px] leading-6 text-slate-500">
+                <p className="text-[13px] font-bold text-slate-100">ایزوله‌سازی واقعی پروفایل‌ها</p>
+                <p className="text-[11.5px] leading-6 text-slate-400">
                   کوکی‌ها، نشست‌های ورود، حافظهٔ محلی، کش و IndexedDB هیچ‌گاه از یک پروفایل خارج نمی‌شوند — هر پروفایل یک پارتیشن پایدار کرومیوم است.
                 </p>
               </div>
             </div>
             {info?.dataRoot && (
               <div className="flex items-center gap-1.5 ms-auto" dir="ltr">
-                <code className="max-w-[220px] truncate rounded-lg border border-slate-900/10 bg-slate-50 px-2 py-1.5 font-mono text-[10px] text-slate-500" title={info.dataRoot}>
+                <code className="max-w-[220px] truncate rounded-lg border border-white/10 bg-ink-850 px-2 py-1.5 font-mono text-[10px] text-slate-400" title={info.dataRoot}>
                   {info.dataRoot}
                 </code>
-                <button onClick={copyDataRoot} className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700" title="کپی مسیر پوشهٔ داده" aria-label="کپی مسیر پوشهٔ داده">
-                  {copiedPath ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                <button onClick={copyDataRoot} className="rounded-lg p-2 text-slate-400 transition hover:bg-ink-800/5 hover:text-slate-200" title="کپی مسیر پوشهٔ داده" aria-label="کپی مسیر پوشهٔ داده">
+                  {copiedPath ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
                 </button>
-                <button onClick={openDataRoot} className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700" title="باز کردن پوشهٔ داده" aria-label="باز کردن پوشهٔ داده">
+                <button onClick={openDataRoot} className="rounded-lg p-2 text-slate-400 transition hover:bg-ink-800/5 hover:text-slate-200" title="باز کردن پوشهٔ داده" aria-label="باز کردن پوشهٔ داده">
                   <FolderOpen size={14} />
                 </button>
               </div>
@@ -225,7 +225,7 @@ export default function App() {
           {loading ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {[0, 1, 2].map((n) => (
-                <div key={n} className="shimmer h-56 rounded-2xl border border-slate-900/[0.06] bg-white/70" />
+                <div key={n} className="shimmer h-56 rounded-2xl border border-white/[0.06] bg-ink-850/70" />
               ))}
             </div>
           ) : profiles.length === 0 ? (
@@ -248,11 +248,11 @@ export default function App() {
       </main>
 
       {/* ───────────────────────── پاورقی ───────────────────────── */}
-      <footer className="relative z-10 flex h-8 shrink-0 items-center justify-center gap-2 border-t border-slate-900/5 bg-white/70 text-[10.5px] text-slate-500">
+      <footer className="relative z-10 flex h-8 shrink-0 items-center justify-center gap-2 border-t border-white/5 bg-ink-850/70 text-[10.5px] text-slate-400">
         <span>تکنوبروز نسخهٔ {info?.version ?? '۱.۰.۰'}</span>
-        <span className="text-slate-300">•</span>
+        <span className="text-slate-600">•</span>
         <span>تمام داده‌ها روی همین رایانه ذخیره می‌شود</span>
-        <span className="text-slate-300">•</span>
+        <span className="text-slate-600">•</span>
         <span>ورود به سایت‌ها را خودتان انجام می‌دهید</span>
       </footer>
 
@@ -273,7 +273,7 @@ export default function App() {
 
 function EmptyState({ onCreate }) {
   return (
-    <div className="flex animate-fade-in flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white/60 px-6 py-20 text-center">
+    <div className="flex animate-fade-in flex-col items-center justify-center rounded-2xl border border-dashed border-slate-700 bg-ink-850/60 px-6 py-20 text-center">
       <div className="relative mb-6">
         <div className="absolute inset-0 -m-4 animate-pulse rounded-full bg-blue-500/15 blur-2xl" />
         <img
@@ -283,8 +283,8 @@ function EmptyState({ onCreate }) {
           draggable={false}
         />
       </div>
-      <h2 className="text-xl font-extrabold text-slate-800">هنوز پروفایلی نساخته‌اید</h2>
-      <p className="mt-2 max-w-md text-[13px] leading-7 text-slate-500">
+      <h2 className="text-xl font-extrabold text-slate-100">هنوز پروفایلی نساخته‌اید</h2>
+      <p className="mt-2 max-w-md text-[13px] leading-7 text-slate-400">
         اولین پروفایل ایزولهٔ خود را بسازید. هیچ ورود یا تأیید جیمیلی لازم نیست — خودتان داخل پنجرهٔ پروفایل وارد می‌شوید و هر پروفایل نشست و داده‌های خودش را نگه می‌دارد.
       </p>
       <button

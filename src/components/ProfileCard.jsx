@@ -27,7 +27,7 @@ export default function ProfileCard({ profile, onOpen, onEdit, onDelete, opening
   };
 
   return (
-    <article className="profile-card group relative flex flex-col rounded-2xl border border-slate-900/[0.08] bg-white p-5 shadow-card">
+    <article className="profile-card group relative flex flex-col rounded-2xl border border-white/[0.08] bg-ink-800 p-5 shadow-card">
       {/* سربرگ: آواتار + هویت */}
       <div className="flex items-start gap-4">
         <div
@@ -39,26 +39,26 @@ export default function ProfileCard({ profile, onOpen, onEdit, onDelete, opening
           {initialsFor(profile.name)}
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-[16px] font-bold leading-snug text-slate-800" title={profile.name}>
+          <h3 className="truncate text-[16px] font-bold leading-snug text-slate-100" title={profile.name}>
             {profile.name}
           </h3>
           <button
             onClick={() => onEdit(profile)}
-            className="mt-1 flex max-w-full items-center gap-1.5 rounded-md text-start text-[12px] text-slate-500 transition hover:text-slate-800"
+            className="mt-1 flex max-w-full items-center gap-1.5 rounded-md text-start text-[12px] text-slate-400 transition hover:text-slate-100"
             title={profile.email ? 'ویرایش برچسب ایمیل' : 'افزودن برچسب ایمیل'}
           >
             <Mail size={12} className="shrink-0" />
             {profile.email ? (
               <span dir="ltr" className="truncate">{profile.email}</span>
             ) : (
-              <span className="text-slate-400 hover:text-slate-600">بدون برچسب ایمیل — افزودن</span>
+              <span className="text-slate-500 hover:text-slate-300">بدون برچسب ایمیل — افزودن</span>
             )}
           </button>
         </div>
       </div>
 
       {/* ردیف متادیتا */}
-      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11.5px] text-slate-500">
+      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11.5px] text-slate-400">
         <span className="inline-flex items-center gap-1.5" title={`ساخته‌شده در ${formatDate(profile.createdAt)}`}>
           <CalendarDays size={12} /> {formatDate(profile.createdAt)}
         </span>
@@ -71,18 +71,18 @@ export default function ProfileCard({ profile, onOpen, onEdit, onDelete, opening
       <div className="mt-3 flex items-center gap-1.5">
         <code
           dir="ltr"
-          className="truncate rounded-md border border-slate-900/[0.07] bg-slate-50 px-2 py-1 text-left font-mono text-[10.5px] text-accent-600"
+          className="truncate rounded-md border border-white/[0.07] bg-ink-850 px-2 py-1 text-left font-mono text-[10.5px] text-accent-400"
           title="پارتیشن ذخیره‌سازی کرومیوم این پروفایل"
         >
           persist:profile-{profile.id}
         </code>
         <button
           onClick={copyPartition}
-          className="rounded-md p-1.5 text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-700 focus:opacity-100 group-hover:opacity-100"
+          className="rounded-md p-1.5 text-slate-500 opacity-0 transition hover:bg-ink-800/5 hover:text-slate-200 focus:opacity-100 group-hover:opacity-100"
           title="کپی نام پارتیشن"
           aria-label="کپی نام پارتیشن"
         >
-          {copied ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+          {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
         </button>
       </div>
 
@@ -111,8 +111,8 @@ export default function ProfileCard({ profile, onOpen, onEdit, onDelete, opening
         </button>
         <button
           onClick={() => onEdit(profile)}
-          className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-900/[0.08] bg-slate-50 text-slate-500
-            transition hover:border-slate-900/15 hover:bg-slate-100 hover:text-slate-800 active:scale-95"
+          className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-ink-850 text-slate-400
+            transition hover:border-white/15 hover:bg-ink-800/5 hover:text-slate-100 active:scale-95"
           title="ویرایش پروفایل"
           aria-label={`ویرایش ${profile.name}`}
         >
@@ -120,8 +120,8 @@ export default function ProfileCard({ profile, onOpen, onEdit, onDelete, opening
         </button>
         <button
           onClick={() => onDelete(profile)}
-          className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-900/[0.08] bg-slate-50 text-slate-500
-            transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 active:scale-95"
+          className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-ink-850 text-slate-400
+            transition hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-400 active:scale-95"
           title="حذف پروفایل"
           aria-label={`حذف ${profile.name}`}
         >

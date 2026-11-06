@@ -54,12 +54,12 @@ export default function ProfileFormModal({ mode, initialProfile, onClose, onSubm
       aria-labelledby="profile-form-title"
     >
       {/* پس‌زمینه */}
-      <div className="absolute inset-0 animate-fade-in bg-slate-900/40 backdrop-blur-[6px]" onClick={() => !busy && onClose()} />
+      <div className="absolute inset-0 animate-fade-in bg-black/60 backdrop-blur-[6px]" onClick={() => !busy && onClose()} />
 
       {/* پنل */}
       <form
         onSubmit={submit}
-        className="relative w-full max-w-md animate-zoom-in overflow-hidden rounded-2xl border border-slate-900/10 bg-white shadow-card"
+        className="relative w-full max-w-md animate-zoom-in overflow-hidden rounded-2xl border border-white/10 bg-ink-800 shadow-card"
       >
         {/* خط آبی بالای مودال */}
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-l from-transparent via-blue-500/60 to-transparent" />
@@ -74,10 +74,10 @@ export default function ProfileFormModal({ mode, initialProfile, onClose, onSubm
               draggable={false}
             />
             <div>
-              <h2 id="profile-form-title" className="text-[16px] font-extrabold text-slate-800">
+              <h2 id="profile-form-title" className="text-[16px] font-extrabold text-slate-100">
                 {isEdit ? 'ویرایش پروفایل' : 'ایجاد پروفایل جدید'}
               </h2>
-              <p className="text-[11.5px] text-slate-500">
+              <p className="text-[11.5px] text-slate-400">
                 {isEdit ? 'تغییر نام یا برچسب ایمیل' : 'فوری، ایزوله و بدون نیاز به ورود'}
               </p>
             </div>
@@ -85,7 +85,7 @@ export default function ProfileFormModal({ mode, initialProfile, onClose, onSubm
           <button
             type="button"
             onClick={() => !busy && onClose()}
-            className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+            className="rounded-lg p-2 text-slate-500 transition hover:bg-ink-800/5 hover:text-slate-200"
             aria-label="بستن"
           >
             <X size={18} />
@@ -95,11 +95,11 @@ export default function ProfileFormModal({ mode, initialProfile, onClose, onSubm
         <div className="space-y-4 px-6 pb-6 pt-5">
           {/* نام */}
           <div>
-            <label htmlFor="profile-name" className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-600">
-              نام پروفایل <span className="text-accent-600">*</span>
+            <label htmlFor="profile-name" className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-300">
+              نام پروفایل <span className="text-accent-400">*</span>
             </label>
-            <div className="flex items-center gap-2 rounded-xl border border-slate-900/10 bg-slate-50 px-3 transition focus-within:border-accent-600/60 focus-within:bg-white focus-within:ring-2 focus-within:ring-accent-600/15">
-              <User size={16} className="shrink-0 text-slate-400" />
+            <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-ink-850 px-3 transition focus-within:border-accent-400/60 focus-within:bg-ink-800 focus-within:ring-2 focus-within:ring-accent-400/15">
+              <User size={16} className="shrink-0 text-slate-500" />
               <input
                 id="profile-name"
                 ref={nameRef}
@@ -109,18 +109,18 @@ export default function ProfileFormModal({ mode, initialProfile, onClose, onSubm
                 maxLength={60}
                 autoComplete="off"
                 spellCheck={false}
-                className="h-11 w-full bg-transparent text-[14px] text-slate-800 placeholder-slate-400 outline-none"
+                className="h-11 w-full bg-transparent text-[14px] text-slate-100 placeholder-slate-500 outline-none"
               />
             </div>
           </div>
 
           {/* ایمیل (برچسب اختیاری فقط) */}
           <div>
-            <label htmlFor="profile-email" className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-600">
-              ایمیل <span className="font-normal text-slate-400">(اختیاری، فقط برچسب)</span>
+            <label htmlFor="profile-email" className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-300">
+              ایمیل <span className="font-normal text-slate-500">(اختیاری، فقط برچسب)</span>
             </label>
-            <div className="flex items-center gap-2 rounded-xl border border-slate-900/10 bg-slate-50 px-3 transition focus-within:border-accent-600/60 focus-within:bg-white focus-within:ring-2 focus-within:ring-accent-600/15">
-              <Mail size={16} className="shrink-0 text-slate-400" />
+            <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-ink-850 px-3 transition focus-within:border-accent-400/60 focus-within:bg-ink-800 focus-within:ring-2 focus-within:ring-accent-400/15">
+              <Mail size={16} className="shrink-0 text-slate-500" />
               <input
                 id="profile-email"
                 type="email"
@@ -131,16 +131,16 @@ export default function ProfileFormModal({ mode, initialProfile, onClose, onSubm
                 maxLength={120}
                 autoComplete="off"
                 spellCheck={false}
-                className="h-11 w-full bg-transparent text-left text-[14px] text-slate-800 placeholder-slate-400 outline-none"
+                className="h-11 w-full bg-transparent text-left text-[14px] text-slate-100 placeholder-slate-500 outline-none"
               />
             </div>
-            <p className="mt-1.5 text-[11px] leading-6 text-slate-500">
+            <p className="mt-1.5 text-[11px] leading-6 text-slate-400">
               برچسبی برای تشخیص پروفایل‌ها از هم. تکنوبروز هرگز وارد نمی‌شود، اعتبارسنجی نمی‌کند و گذرواژه‌ای ذخیره نمی‌کند.
             </p>
           </div>
 
           {error && (
-            <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-[12px] text-rose-700">
+            <div className="flex items-start gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2.5 text-[12px] text-rose-300">
               <CircleAlert size={15} className="mt-0.5 shrink-0" />
               <span>{error}</span>
             </div>
@@ -151,7 +151,7 @@ export default function ProfileFormModal({ mode, initialProfile, onClose, onSubm
             <button
               type="button"
               onClick={() => !busy && onClose()}
-              className="h-10 rounded-xl px-4 text-[13px] font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+              className="h-10 rounded-xl px-4 text-[13px] font-medium text-slate-400 transition hover:bg-ink-800/5 hover:text-slate-100"
             >
               انصراف
             </button>

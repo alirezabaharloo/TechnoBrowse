@@ -5,14 +5,15 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Light surface scale (kept the "ink-*" names so components stay readable)
+        // Dark navy surface scale ("ink-*") — matches the TechnoWin logo: blue is the
+        // primary accent, white is the secondary (text/icon) color.
         ink: {
-          950: '#e3e8f4',
-          900: '#eef1f8', // page background
-          850: '#f6f7fd', // inset surfaces
-          800: '#ffffff', // cards / panels
-          750: '#e9edf6', // subtle fills & hover
-          700: '#dce2ee', // strong borders
+          950: '#05070d',
+          900: '#0b1220', // page background
+          850: '#0e1626', // inset surfaces / input fills
+          800: '#141d33', // cards / panels
+          750: '#1a2440', // subtle fills & hover
+          700: '#232f52', // strong borders
         },
         accent: {
           400: '#3d8bff',
@@ -22,17 +23,17 @@ module.exports = {
       },
       fontFamily: {
         sans: [
-          'Vazirmatn',
+          'Sahel',
           'Segoe UI',
           'Tahoma',
           'system-ui',
           'sans-serif',
         ],
-        mono: ['Vazirmatn', 'Cascadia Mono', 'Consolas', 'monospace'],
+        mono: ['Cascadia Mono', 'Consolas', 'monospace'],
       },
       boxShadow: {
-        card: '0 10px 30px rgba(15, 23, 42, 0.10), 0 2px 6px rgba(15, 23, 42, 0.06)',
-        glow: '0 0 0 1px rgba(37, 99, 235, 0.25), 0 10px 34px rgba(37, 99, 235, 0.28)',
+        card: '0 18px 44px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.35)',
+        glow: '0 0 0 1px rgba(61, 139, 255, 0.35), 0 10px 36px rgba(37, 99, 235, 0.35)',
       },
       keyframes: {
         'fade-in': {
