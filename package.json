@@ -16,6 +16,7 @@
     "render-check": "node scripts/render-check.mjs",
     "dom-check": "node scripts/dom-check.mjs",
     "dom-check:chrome": "node scripts/dom-check-chrome.mjs",
+    "visual-check": "node scripts/visual-check.mjs",
     "check": "npm run test && npm run smoke && npm run render-check && npm run dom-check && npm run dom-check:chrome && npm run build",
     "dist": "npm run build && electron-builder --win portable",
     "dist:dir": "npm run build && electron-builder --win dir"
@@ -26,11 +27,13 @@
     "react-dom": "^19.3.1"
   },
   "devDependencies": {
+    "@sparticuz/chromium": "^153.0.0",
     "@vitejs/plugin-react": "^6.2.1",
     "autoprefixer": "^10.6.2",
     "electron": "^45.2.3",
     "electron-builder": "^26.18.0",
     "jsdom": "^31.0.0",
+    "playwright-core": "^1.65.0",
     "postcss": "^8.5.32",
     "tailwindcss": "^3.4.19",
     "vite": "^8.3.6"

@@ -1,5 +1,7 @@
 # TechnoBrowse
 
+![TechnoBrowse dashboard](docs/screenshots/dashboard.png)
+
 **TechnoBrowse is a lightweight desktop browser where every profile is a completely isolated, persistent browser environment.** Log into ChatGPT with one account in one profile, another account in a second profile, Gmail in a third — they never share cookies, sessions, cached files, or storage.
 
 - **No Gmail auth wall** — profiles are created instantly with just a name. Authentication happens only inside the profile windows, manually, by you.
@@ -107,6 +109,8 @@ The data root is resolved **before** any session is created (`electron/paths.js`
 
 ## Using the app
 
+![Creating a profile](docs/screenshots/create-modal.png)
+
 **Dashboard**
 - `+ Create New Profile` → enter a name (required) and an optional email label → **Create Profile**. Done. No sign-in.
 - Each card shows the avatar, name, email label, created/last-opened dates, the raw partition name (with copy button), and **Open Profile** / edit / delete actions.
@@ -119,6 +123,8 @@ The data root is resolved **before** any session is created (`electron/paths.js`
 - **Home** opens the built-in TechnoBrowse start page (clock, Google search, quick tiles) — it works offline.
 - F12 / Ctrl+Shift+I toggles DevTools for the page.
 - Log into Gmail, ChatGPT, Gemini, Claude, GitHub… manually. Credentials never touch the app — they're typed into the website, inside that profile's isolated storage.
+
+![TechnoBrowse start page](docs/screenshots/start-page.png)
 
 ---
 
@@ -185,9 +191,12 @@ TechnoBrowse/
 | `npm run render-check` — both React entries render | ✅ 2/2 |
 | `npm run dom-check` — dashboard create/edit/delete flow | ✅ 9/9 |
 | `npm run dom-check:chrome` — toolbar navigation flow | ✅ 9/9 |
+| Visual QA (`scripts/visual-check.mjs`, headless Chromium screenshots of dashboard, modals, toolbar, start page) | ✅ see `docs/screenshots/` |
 | `electron-builder --linux dir` in this sandbox | ❌ blocked — the Electron binary host (GitHub release assets) is unreachable from here |
 | Live GUI run / portable `.exe` build | ⚠️ must be run once on a normal network — `npm install && npm run dist` |
 | Manual Tests 1–5 (isolation, persistence, restart, deletion) | ⚠️ run on Windows before release |
+
+`npm run preview` (or `npx vite preview`) serves the built app on port 4173 — in a normal browser the dashboard runs in a sandboxed **preview/demo mode** (profile actions are simulated); the real isolated sessions exist only inside the Electron app.
 
 ## Troubleshooting
 
