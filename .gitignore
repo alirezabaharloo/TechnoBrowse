@@ -1,0 +1,9 @@
+node_modules/
+dist/
+release/
+*.log
+*.local
+.DS_Store
+Thumbs.db
+.write-test-*
+profiles.json.corrupt-*.bak

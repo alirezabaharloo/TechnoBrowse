@@ -1,0 +1,124 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-ink-900 text-slate-200 antialiased;
+  font-feature-settings: 'cv02', 'cv03', 'cv04';
+}
+
+/* Ambient background: layered radial glows + a faint blueprint grid */
+.app-backdrop {
+  background:
+    radial-gradient(1000px 560px at 70% -20%, rgba(59, 130, 246, 0.16), transparent 60%),
+    radial-gradient(800px 500px at -10% 110%, rgba(37, 99, 235, 0.12), transparent 55%),
+    radial-gradient(640px 420px at 55% 120%, rgba(94, 163, 255, 0.07), transparent 55%),
+    #0b1220;
+}
+.app-grid::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(148, 184, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 184, 255, 0.045) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, black 35%, transparent 75%);
+}
+
+/* Thin custom scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(94, 163, 255, 0.22);
+  border-radius: 9999px;
+  border: 2px solid #0b1220;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(94, 163, 255, 0.38);
+}
+
+/* Card hover lift */
+.profile-card {
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.22s ease, box-shadow 0.22s ease;
+}
+.profile-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(94, 163, 255, 0.35);
+  box-shadow: 0 18px 44px rgba(2, 6, 23, 0.55), 0 0 0 1px rgba(94, 163, 255, 0.12);
+}
+
+/* Focus visibility for keyboard users */
+:focus-visible {
+  outline: 2px solid rgba(94, 163, 255, 0.65);
+  outline-offset: 2px;
+}
+
+/* Loading progress bar for the browser chrome */
+@keyframes indeterminate {
+  0% {
+    left: -35%;
+    width: 35%;
+  }
+  60% {
+    left: 100%;
+    width: 45%;
+  }
+  100% {
+    left: 100%;
+    width: 45%;
+  }
+}
+.loading-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.loading-bar > span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #2563eb, #5ea3ff, #2563eb);
+  box-shadow: 0 0 10px rgba(94, 163, 255, 0.7);
+  animation: indeterminate 1.15s ease-in-out infinite;
+}
+
+/* Skeleton shimmer for the dashboard while profiles load */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(148, 184, 255, 0.09), transparent);
+  animation: shimmer-slide 1.5s infinite;
+}
+@keyframes shimmer-slide {
+  100% {
+    transform: translateX(100%);
+  }
+}

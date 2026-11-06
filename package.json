@@ -1,0 +1,34 @@
+{
+  "name": "technobrowse",
+  "productName": "TechnoBrowse",
+  "version": "1.0.0",
+  "description": "TechnoBrowse — a lightweight multi-profile desktop browser. Every profile is a completely isolated, persistent browser environment.",
+  "author": "TechnoBrowse",
+  "license": "MIT",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "npm run build && electron .",
+    "test": "node scripts/test-store.mjs",
+    "smoke": "node scripts/smoke-main.cjs",
+    "render-check": "node scripts/render-check.mjs",
+    "dist": "npm run build && electron-builder --win portable",
+    "dist:dir": "npm run build && electron-builder --win dir"
+  },
+  "dependencies": {
+    "lucide-react": "^1.70.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.2.1",
+    "autoprefixer": "^10.6.2",
+    "electron": "^45.2.3",
+    "electron-builder": "^26.18.0",
+    "postcss": "^8.5.32",
+    "tailwindcss": "^3.4.19",
+    "vite": "^8.3.6"
+  }
+}

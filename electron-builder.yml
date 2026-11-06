@@ -1,0 +1,34 @@
+appId: com.technobrowse.app
+productName: TechnoBrowse
+copyright: Copyright © 2026 TechnoBrowse
+
+# Code layout inside the package
+files:
+  - electron/**
+  - dist/**
+  - package.json
+  - "!**/*.md"
+
+asar: true
+
+directories:
+  output: release
+  buildResources: build
+
+# Windows x64 portable executable — no installer, runs from any writable folder
+win:
+  target:
+    - target: portable
+      arch:
+        - x64
+  icon: build/icon.png
+  artifactName: TechnoBrowse-${version}-Portable-x64.${ext}
+
+portable:
+  artifactName: TechnoBrowse-${version}-Portable-x64.${ext}
+  # "user" level: no admin prompt required
+  requestExecutionLevel: user
+
+# Never wipe or relocate the portable data folder on updates — data lives next
+# to the exe in portable mode (profiles.json + user-data/), and profiles keep
+# working after the exe is replaced with a newer build.
