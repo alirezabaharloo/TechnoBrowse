@@ -14,7 +14,8 @@ const fs = require('fs');
 const path = require('path');
 const { pathToFileURL, fileURLToPath } = require('url');
 
-const { app, BrowserWindow, WebContentsView, ipcMain, session, shell } = require('electron');
+const { app, BrowserWindow, WebContentsView, ipcMain, session, shell, dialog } = require('electron');
+const { DESKTOP_CHROME_USER_AGENT } = require('./chromeIdentity');
 
 // --- 1. Resolve storage locations BEFORE anything else touches storage. ---
 const { resolveDataRoot } = require('./paths');
@@ -270,13 +271,79 @@ function loadRendererPage(win, page) {
 // ---------------------------------------------------------------------------
 
 function hardenSession(profileSession) {
-  // Deny sensitive hardware-ish permissions outright; everything else behaves
-  // like a normal browser (user is prompted by Chromium where applicable).
+  // 1. Present a stock desktop Chrome UA. Google's sign-in (and other
+  //    bot-sensitive pages) refuse embedded browsers that advertise Electron:
+  //    they serve "The browser you're using doesn't support JavaScript".
+  if (typeof profileSession.setUserAgent === 'function') {
+    try {
+      profileSession.setUserAgent(DESKTOP_CHROME_USER_AGENT);
+    } catch (error) {
+      process.stderr.write(`[technobrowse] failed to set profile User-Agent: ${error.message}\n`);
+    }
+  }
+
+  // 2. Downloads behave like Chrome: a save dialog per file, unique names.
+  attachDownloadHandler(profileSession);
+
+  // 3. Deny sensitive hardware-ish permissions outright; everything else behaves
+  //    like a normal browser (user is prompted by Chromium where applicable).
   const denied = new Set(['usb', 'serial', 'hid', 'midiSysex', 'bluetooth']);
   profileSession.setPermissionRequestHandler((webContents, permission, callback) => {
     callback(!denied.has(permission));
   });
   profileSession.setPermissionCheckHandler((webContents, permission) => !denied.has(permission));
+}
+
+// Pick a collision-free path inside the user's Downloads folder.
+function uniqueDownloadPath(dir, filename) {
+  const safeName = path.basename(filename || 'download') || 'download';
+  const ext = path.extname(safeName);
+  const base = safeName.slice(0, safeName.length - ext.length) || 'download';
+  let candidate = path.join(dir, safeName);
+  let counter = 1;
+  try {
+    while (fs.existsSync(candidate) && counter < 1000) {
+      candidate = path.join(dir, `${base} (${counter})${ext}`);
+      counter += 1;
+    }
+  } catch {
+    /* best effort — Chromium will still ask the OS for an available name */
+  }
+  return candidate;
+}
+
+function attachDownloadHandler(profileSession) {
+  // In smoke tests the session stub has no event emitter — downloads just no-op.
+  if (!profileSession || typeof profileSession.on !== 'function') return;
+  profileSession.on('will-download', (event, item) => {
+    try {
+      const filename = item.getFilename() || 'download';
+      const downloadsDir = app.getPath('downloads');
+      let chosen = null;
+      if (dialog && typeof dialog.showSaveDialogSync === 'function') {
+        // Synchronous prompt inside will-download (Chromium waits for it),
+        // same UX as Chrome's "Ask where to save each file".
+        chosen = dialog.showSaveDialogSync({
+          title: 'ذخیرهٔ فایل',
+          defaultPath: uniqueDownloadPath(downloadsDir, filename),
+        });
+      } else {
+        chosen = uniqueDownloadPath(downloadsDir, filename); // silent save, like Chrome with prompting off
+      }
+      if (!chosen) {
+        item.cancel();
+        return;
+      }
+      item.setSavePath(chosen);
+    } catch (error) {
+      process.stderr.write(`[technobrowse] download failed: ${error.message}\n`);
+      try {
+        item.cancel();
+      } catch {
+        /* item already gone */
+      }
+    }
+  });
 }
 
 function attachNavigationGuards(contents, profile) {

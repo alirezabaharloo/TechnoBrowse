@@ -18,9 +18,12 @@ const path = require('node:path');
 const Module = require('node:module');
 
 const results = [];
-const test = (name, fn) => {
+// NOTE: async — every test body is genuinely awaited before the report runs.
+// (Previously test() fire-and-forget'd async bodies, so smoke assertions never
+// actually blocked the exit code.)
+const test = async (name, fn) => {
   try {
-    fn();
+    await fn();
     results.push(['PASS', name]);
   } catch (error) {
     results.push(['FAIL', `${name}\n        ${error.stack || error.message}`]);
@@ -120,6 +123,8 @@ function fakeSession(partition) {
       flushStorageData() {},
       setPermissionRequestHandler() {},
       setPermissionCheckHandler() {},
+      setUserAgent(ua) { this._userAgent = ua; },
+      on() {},
     });
   }
   fromPartitionCalls.push(partition);
@@ -182,7 +187,7 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
     return handler({ sender: sender ?? { id: -1 } }, payload);
   };
 
-  test('app:info reports the sandboxed temp data root', async () => {
+  await test('app:info reports the sandboxed temp data root', async () => {
     const info = await call('app:info');
     assert.equal(info.dataRoot, tmpData);
     assert.equal(info.sessionData, tmpSession);
@@ -190,7 +195,7 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
   });
 
   let profileA;
-  test('profiles:create creates isolated profile via IPC', async () => {
+  await test('profiles:create creates isolated profile via IPC', async () => {
     profileA = await call('profiles:create', { name: 'Smoke Alpha', email: 'alpha@example.com' });
     assert.match(profileA.id, /^[a-f0-9]{18}$/);
     const persisted = JSON.parse(fs.readFileSync(path.join(tmpData, 'profiles.json'), 'utf8'));
@@ -199,12 +204,12 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
   });
 
   let profileB;
-  test('profiles:create second profile with distinct id', async () => {
+  await test('profiles:create second profile with distinct id', async () => {
     profileB = await call('profiles:create', { name: 'Smoke Beta', email: '' });
     assert.notEqual(profileA.id, profileB.id);
   });
 
-  test('profiles:open creates a window whose page view uses persist:profile-<idA> — never the default session', async () => {
+  await test('profiles:open creates a window whose page view uses persist:profile-<idA> — never the default session', async () => {
     FakeBrowserWindow._instances.length = 0;
     FakeWebContentsView._instances.length = 0;
     const result = await call('profiles:open', { id: profileA.id });
@@ -217,19 +222,29 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
     assert.equal(view.webContents._prefs.sandbox, true);
   });
 
-  test('opening the same profile twice focuses instead of duplicating', async () => {
+  await test('opening the same profile twice focuses instead of duplicating', async () => {
     const result = await call('profiles:open', { id: profileA.id });
     assert.equal(result.reused, true);
   });
 
-  test('profiles:open creates a DIFFERENT partition for the second profile', async () => {
-    FakeWebContentsView._instances.length = 0;
+  await test('profiles:open creates a DIFFERENT partition for the second profile', async () => {
+    const beforeB = FakeWebContentsView._instances.length;
     await call('profiles:open', { id: profileB.id });
-    const view = FakeWebContentsView._instances[0];
+    const view = FakeWebContentsView._instances[beforeB]; // the newly created view
     assert.equal(view.webContents._prefs.session?.partition, `persist:profile-${profileB.id}`);
   });
 
-  test('chrome IPC: navigate normalizes input and loads it in the profile view', async () => {
+  await test('profile sessions present a stock desktop Chrome UA (no Electron token)', () => {
+    for (const p of [profileA, profileB]) {
+      const sess = partitionSessions.get(`persist:profile-${p.id}`);
+      assert.ok(sess, 'partition session was created');
+      assert.ok(sess._userAgent, 'setUserAgent was called on the profile session');
+      assert.ok(!/Electron|TechnoBrowse/.test(sess._userAgent), `UA must not advertise Electron: ${sess._userAgent}`);
+      assert.match(sess._userAgent, /Chrome\/\d+\.\d+\.\d+\.\d+ Safari\/537\.36$/);
+    }
+  });
+
+  await test('chrome IPC: navigate normalizes input and loads it in the profile view', async () => {
     const chromeWindow = FakeBrowserWindow._instances.find((w) =>
       String(w.options.webPreferences?.preload || '').endsWith('chromePreload.js')
     );
@@ -246,18 +261,28 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
     assert.equal(blocked.ok, false);
   });
 
-  test('chrome:set-toolbar-height repositions the page view below the toolbar', async () => {
+  await test('chrome:set-toolbar-height repositions the page view below the toolbar', async () => {
     const chromeWindow = FakeBrowserWindow._instances.find((w) =>
       String(w.options.webPreferences?.preload || '').endsWith('chromePreload.js')
     );
     const sender = chromeWindow.webContents;
     await call('chrome:set-toolbar-height', { height: 92 }, sender);
-    const view = FakeWebContentsView._instances.find((v) => v.webContents._bounds);
+    // The handler targets the record bound to this chrome window (profile A);
+    // instances[0] is profile B's view now, so locate A's view explicitly.
+    const view = FakeWebContentsView._instances.find(
+      (v) => v.webContents._prefs.session?.partition === `persist:profile-${profileA.id}`
+    );
+    assert.ok(view, 'profile A page view found');
     assert.equal(view.webContents._bounds.y, 92);
     assert.equal(view.webContents._bounds.height, 840 - 92);
+    // …and profile B's view (different window) keeps its own layout
+    const viewB = FakeWebContentsView._instances.find(
+      (v) => v.webContents._prefs.session?.partition === `persist:profile-${profileB.id}`
+    );
+    assert.equal(viewB.webContents._bounds.y, 56, 'B toolbar unchanged');
   });
 
-  test('profiles:delete removes metadata + wipes ONLY that profile’s session', async () => {
+  await test('profiles:delete removes metadata + wipes ONLY that profile’s session', async () => {
     await call('profiles:delete', { id: profileB.id });
     const persisted = JSON.parse(fs.readFileSync(path.join(tmpData, 'profiles.json'), 'utf8'));
     assert.equal(persisted.profiles.length, 1);

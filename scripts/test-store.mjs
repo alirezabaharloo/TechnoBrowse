@@ -14,6 +14,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const { ProfileStore } = require('../electron/profileStore.js');
 const { normalizeUserUrl, isAllowedNavigation, isAllowedExternal, parsePopupFeatures } = require('../electron/urlUtils.js');
+const { buildDesktopChromeUserAgent } = require('../electron/chromeIdentity.js');
 
 const results = [];
 async function test(name, fn) {
@@ -109,6 +110,22 @@ await test('remove deletes only the targeted profile', async () => {
   const after = await store.list();
   assert.equal(after.length, before.length - 1);
   assert.ok(!after.some((p) => p.id === victim.id));
+});
+
+// ── chromeIdentity ─────────────────────────────────────────────────────────
+
+await test('UA presented to websites is stock desktop Chrome (Google sign-in compatible)', async () => {
+  const ua = buildDesktopChromeUserAgent();
+  assert.ok(!/Electron|TechnoBrowse|OPR\/|Edg\//.test(ua), 'no embedded-browser tokens');
+  assert.match(ua, /Chrome\/\d+\.\d+\.\d+\.\d+ Safari\/537\.36$/, 'Chrome-style UA suffix');
+  assert.match(buildDesktopChromeUserAgent('win32', '142.0.0.0'), /^Mozilla\/5\.0 \(Windows NT 10\.0; Win64; x64\)/);
+  assert.match(buildDesktopChromeUserAgent('darwin', '142.0.0.0'), /Macintosh; Intel Mac OS X 10_15_7/);
+  assert.match(buildDesktopChromeUserAgent('linux', '142.0.0.0'), /X11; Linux x86_64/);
+  // malformed Chrome version falls back to a sane one instead of leaking "undefined"
+  assert.equal(
+    buildDesktopChromeUserAgent('win32', 'garbage'),
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36'
+  );
 });
 
 // ── urlUtils ────────────────────────────────────────────────────────────────
