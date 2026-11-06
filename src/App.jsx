@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  AlertTriangle,
+  Globe,
   Check,
   Copy,
   FolderOpen,
   Plus,
+  RefreshCw,
   ShieldCheck,
   Sparkles,
   Users,
@@ -16,9 +19,9 @@ import DeleteProfileModal from './components/DeleteProfileModal';
 import Toasts from './components/Toasts';
 
 const DEMO_PROFILES = [
-  { id: 'demo8f3a1b2c4d5e', name: 'حساب کاری', email: 'alex@work.com', color: 'blue', createdAt: new Date(Date.now() - 86400000 * 40).toISOString(), lastOpenedAt: new Date(Date.now() - 3600000 * 5).toISOString() },
-  { id: 'demo1c2d3e4f5a6b', name: 'شخصی', email: 'alex.personal@gmail.com', color: 'emerald', createdAt: new Date(Date.now() - 86400000 * 21).toISOString(), lastOpenedAt: new Date(Date.now() - 86400000 * 2).toISOString() },
-  { id: 'demo9a8b7c6d5e4f', name: 'پروژهٔ مشتری', email: '', color: 'amber', createdAt: new Date(Date.now() - 86400000 * 6).toISOString(), lastOpenedAt: null },
+  { id: 'demo8f3a1b2c4d5e', name: 'حساب کاری', email: 'alex@work.com', color: 'blue', createdAt: new Date(Date.now() - 86400000 * 40).toISOString(), lastOpenedAt: new Date(Date.now() - 3600000 * 5).toISOString(), directory: 'profiles/profile-demo8f3a1b2c4d5e', isRunning: false },
+  { id: 'demo1c2d3e4f5a6b', name: 'شخصی', email: 'alex.personal@gmail.com', color: 'emerald', createdAt: new Date(Date.now() - 86400000 * 21).toISOString(), lastOpenedAt: new Date(Date.now() - 86400000 * 2).toISOString(), directory: 'profiles/profile-demo1c2d3e4f5a6b', isRunning: false },
+  { id: 'demo9a8b7c6d5e4f', name: 'پروژهٔ مشتری', email: '', color: 'amber', createdAt: new Date(Date.now() - 86400000 * 6).toISOString(), lastOpenedAt: null, directory: 'profiles/profile-demo9a8b7c6d5e4f', isRunning: false },
 ];
 
 export default function App() {
@@ -27,6 +30,7 @@ export default function App() {
 
   const [profiles, setProfiles] = useState([]);
   const [info, setInfo] = useState(null);
+  const [chromeStatus, setChromeStatus] = useState(null); // null = unknown yet
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null); // { type: 'create' | 'edit' | 'delete', profile? }
   const [toasts, setToasts] = useState([]);
@@ -51,12 +55,18 @@ export default function App() {
     (async () => {
       try {
         if (api) {
-          const [list, appInfo] = await Promise.all([api.listProfiles(), api.getAppInfo()]);
+          const [list, appInfo, chrome] = await Promise.all([
+            api.listProfiles(),
+            api.getAppInfo(),
+            api.getChromeStatus(),
+          ]);
           if (!mounted) return;
           setProfiles(list);
           setInfo(appInfo);
+          setChromeStatus(chrome);
         } else {
           setProfiles(DEMO_PROFILES);
+          setChromeStatus({ found: true, source: 'demo' });
         }
       } catch (error) {
         pushToast(error?.message || 'بارگذاری پروفایل‌ها ممکن نشد.', 'error');
@@ -65,9 +75,13 @@ export default function App() {
       }
     })();
     const unsubscribe = api?.onProfilesChanged?.(() => refresh());
+    // Refresh when the window regains focus so «در حال اجرا» badges and open/running state stay accurate.
+    const onFocus = () => refresh();
+    window.addEventListener('focus', onFocus);
     return () => {
       mounted = false;
       unsubscribe?.();
+      window.removeEventListener('focus', onFocus);
     };
   }, [api, pushToast, refresh]);
 
@@ -108,9 +122,13 @@ export default function App() {
       pushToast(`پروفایل «${target.name}» حذف شد (حالت پیش‌نمایش).`);
       return;
     }
-    await api.deleteProfile(target.id);
-    await refresh();
-    pushToast(`پروفایل «${target.name}» و تمام داده‌هایش حذف شد.`);
+    try {
+      await api.deleteProfile(target.id);
+      await refresh();
+      pushToast(`پروفایل «${target.name}» و تمام داده‌هایش حذف شد.`);
+    } catch (error) {
+      pushToast(error?.message || 'حذف پروفایل ممکن نشد.', 'error');
+    }
   };
 
   const handleOpen = async (profile) => {
@@ -120,11 +138,31 @@ export default function App() {
     }
     setOpeningId(profile.id);
     try {
-      await api.openProfile(profile.id);
+      const result = await api.openProfile(profile.id);
+      if (result?.reused) {
+        pushToast('این پروفایل هم‌اکنون در حال اجراست — پنجرهٔ Chrome آن را بررسی کنید.', 'info');
+      }
     } catch (error) {
+      if (error?.code === 'CHROME_NOT_FOUND' || /Chrome پیدا نشد/.test(error?.message ?? '')) {
+        setChromeStatus({ found: false, error: error?.message });
+      }
       pushToast(error?.message || 'باز کردن پروفایل ممکن نشد.', 'error');
     } finally {
       setOpeningId(null);
+    }
+  };
+
+  const recheckChrome = async () => {
+    if (!api?.refreshChromeStatus) return;
+    try {
+      const status = await api.refreshChromeStatus();
+      setChromeStatus(status);
+      pushToast(
+        status?.found ? 'Google Chrome پیدا شد — می‌توانید پروفایل‌ها را باز کنید.' : 'هنوز Google Chrome پیدا نشد.',
+        status?.found ? 'success' : 'error'
+      );
+    } catch {
+      pushToast('بررسی مجدد Chrome ممکن نشد.', 'error');
     }
   };
 
@@ -178,7 +216,7 @@ export default function App() {
               Techno<span className="text-accent-400">Browse</span>
             </h1>
             <p className="text-[9.5px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-              مرورگر ایزولهٔ چندپروفایلی
+              مدیر پروفایل‌های Chrome
             </p>
           </div>
         </div>
@@ -210,6 +248,38 @@ export default function App() {
       {/* ───────────────────────── محتوا ───────────────────────── */}
       <main className="relative z-10 flex-1 overflow-y-auto">
         <div className="mx-auto max-w-6xl px-6 pb-8 pt-6">
+          {/* بنر نبود Google Chrome — واضح، و بدون جایگزین پنهان */}
+          {chromeStatus && chromeStatus.found === false && (
+            <section
+              role="alert"
+              className="mb-4 flex flex-col gap-3 rounded-2xl border border-amber-600/40 bg-amber-600/10 p-4 shadow-sm md:flex-row md:items-center md:gap-4"
+            >
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-600/30 bg-amber-600/10">
+                <AlertTriangle size={22} className="text-amber-600" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[13px] font-bold text-slate-100">Google Chrome پیدا نشد</p>
+                <p className="text-[11.5px] leading-6 text-slate-400">
+                  TechnoBrowse فقط مدیریت‌کننده است و خودش صفحهٔ وب را باز نمی‌کند. برای باز کردن هر پروفایل باید Google Chrome نصب باشد.
+                </p>
+              </div>
+              <div className="flex shrink-0 flex-wrap items-center gap-2 md:ms-auto">
+                <button
+                  onClick={() => api?.openChromeDownload?.()}
+                  className="flex h-9 items-center gap-1.5 rounded-lg border border-amber-600/40 bg-amber-600/15 px-3 text-[12px] font-bold text-amber-600 transition hover:bg-amber-600/25"
+                >
+                  <Globe size={14} /> صفحهٔ دریافت Chrome
+                </button>
+                <button
+                  onClick={recheckChrome}
+                  className="flex h-9 items-center gap-1.5 rounded-lg border border-tint-line bg-ink-850 px-3 text-[12px] font-bold text-slate-300 transition hover:bg-tint-fill hover:text-slate-100"
+                >
+                  <RefreshCw size={14} /> بررسی مجدد
+                </button>
+              </div>
+            </section>
+          )}
+
           {/* بنر ایزوله‌سازی */}
           <section className="mb-6 flex flex-col gap-3 rounded-2xl border border-[rgba(61,139,255,0.2)] bg-gradient-to-l from-blue-500/15 via-ink-850 to-ink-850 p-4 shadow-sm md:flex-row md:items-center md:gap-4">
             <div className="flex items-center gap-3">
@@ -219,7 +289,7 @@ export default function App() {
               <div>
                 <p className="text-[13px] font-bold text-slate-100">ایزوله‌سازی واقعی پروفایل‌ها</p>
                 <p className="text-[11.5px] leading-6 text-slate-400">
-                  کوکی‌ها، نشست‌های ورود، حافظهٔ محلی، کش و IndexedDB هیچ‌گاه از یک پروفایل خارج نمی‌شوند — هر پروفایل یک پارتیشن پایدار کرومیوم است.
+                  هر پروفایل یک <span dir="ltr">user-data-dir</span> مجزای Chrome است — کوکی‌ها، نشست‌های ورود، حافظهٔ محلی، IndexedDB و کش هیچ‌گاه از یک پروفایل خارج نمی‌شوند.
                 </p>
               </div>
             </div>
@@ -257,6 +327,7 @@ export default function App() {
                   onOpen={handleOpen}
                   onEdit={(p) => setModal({ type: 'edit', profile: p })}
                   onDelete={(p) => setModal({ type: 'delete', profile: p })}
+                  chromeAvailable={chromeStatus ? chromeStatus.found !== false : true}
                 />
               ))}
             </div>
@@ -270,7 +341,7 @@ export default function App() {
         <span className="text-slate-600">•</span>
         <span>تمام داده‌ها روی همین رایانه ذخیره می‌شود</span>
         <span className="text-slate-600">•</span>
-        <span>ورود به سایت‌ها را خودتان انجام می‌دهید</span>
+        <span>ورود به سایت‌ها داخل Chrome خودتان انجام می‌شود</span>
       </footer>
 
       {/* ───────────────────────── مودال‌ها و اعلان‌ها ───────────────────────── */}
@@ -302,7 +373,7 @@ function EmptyState({ onCreate }) {
       </div>
       <h2 className="text-xl font-extrabold text-slate-100">هنوز پروفایلی نساخته‌اید</h2>
       <p className="mt-2 max-w-md text-[13px] leading-7 text-slate-400">
-        اولین پروفایل ایزولهٔ خود را بسازید. هیچ ورود یا تأیید جیمیلی لازم نیست — خودتان داخل پنجرهٔ پروفایل وارد می‌شوید و هر پروفایل نشست و داده‌های خودش را نگه می‌دارد.
+        اولین پروفایل خود را بسازید. TechnoBrowse فقط مدیریت می‌کند — سایت‌ها داخل Google Chrome باز می‌شوند و هر پروفایل داده‌ها و نشست‌های خودش را جدا نگه می‌دارد؛ هیچ ورود یا تأیید جیمیلی در این برنامه لازم نیست.
       </p>
       <button
         onClick={onCreate}

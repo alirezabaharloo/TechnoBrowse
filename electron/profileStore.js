@@ -19,6 +19,9 @@ const STORE_VERSION = 1;
 const MAX_NAME_LENGTH = 60;
 const MAX_EMAIL_LENGTH = 120;
 
+// Directory layout: <dataRoot>/profiles/profile-<id>/ (Chrome user-data-dir).
+const PROFILE_DIR_RE = /^profiles\/profile-[a-z0-9-]{4,64}$/i;
+
 const AVATAR_PALETTE = [
   'blue', 'violet', 'emerald', 'amber', 'rose',
   'cyan', 'fuchsia', 'lime', 'orange', 'teal',
@@ -64,6 +67,7 @@ class ProfileStore {
       color: AVATAR_PALETTE[crypto.randomInt(0, AVATAR_PALETTE.length)],
       createdAt: now,
       lastOpenedAt: null,
+      directory: buildProfileDirectory(id),
     };
     await this._mutate((data) => {
       data.profiles.push(profile);
@@ -139,6 +143,41 @@ class ProfileStore {
 }
 
 // ------------------------------------------------------------------ helpers
+
+/** Deterministic relative directory for a profile (POSIX-style, forward slashes). */
+function buildProfileDirectory(id) {
+  assertId(id);
+  return `profiles/profile-${id}`;
+}
+
+/** Self-heal: any missing/invalid directory is replaced by the canonical one. */
+function sanitizeProfileDirectory(dir, id) {
+  const candidate = typeof dir === 'string' ? dir.trim().replace(/\\/g, '/') : '';
+  if (PROFILE_DIR_RE.test(candidate)) return candidate;
+  // Legacy profiles (pre-manager architecture) have no directory → assign one.
+  try {
+    return buildProfileDirectory(id);
+  } catch {
+    return undefined; // unusable entry; it will still be filtered by the id/name check above
+  }
+}
+
+/**
+ * Resolve a profile's Chrome user-data directory to an absolute path and prove
+ * it stays inside <dataRoot>/profiles. Never trusts the stored string beyond
+ * the strict regex, and never accepts renderer-supplied paths.
+ */
+function resolveProfileDataDir(dataRoot, profile) {
+  const id = String(profile?.id ?? '');
+  assertId(id);
+  const relative = sanitizeProfileDirectory(profile?.directory, id);
+  const profilesRoot = path.resolve(dataRoot, 'profiles');
+  const absolute = path.resolve(dataRoot, relative);
+  if (!absolute.startsWith(profilesRoot + path.sep)) {
+    throw new Error('مسیر پوشهٔ پروفایل نامعتبر است.');
+  }
+  return absolute;
+}
 
 function structuredCloneSafe(value) {
   return JSON.parse(JSON.stringify(value));
@@ -221,7 +260,8 @@ function readFromDisk(filePath) {
     const parsed = JSON.parse(raw);
     const profiles = Array.isArray(parsed?.profiles) ? parsed.profiles : [];
     const clean = profiles
-      .filter((p) => p && typeof p.id === 'string' && typeof p.name === 'string')
+      .filter((p) => p && typeof p.id === 'string' && typeof p.name === 'string'
+        && /^[a-z0-9-]{4,64}$/i.test(p.id))
       .map((p) => ({
         id: p.id,
         name: p.name,
@@ -229,6 +269,7 @@ function readFromDisk(filePath) {
         color: typeof p.color === 'string' ? p.color : 'blue',
         createdAt: typeof p.createdAt === 'string' ? p.createdAt : new Date().toISOString(),
         lastOpenedAt: typeof p.lastOpenedAt === 'string' ? p.lastOpenedAt : null,
+        directory: sanitizeProfileDirectory(p.directory, p.id),
       }));
     return { version: STORE_VERSION, profiles: clean };
   } catch (error) {
@@ -261,4 +302,11 @@ async function atomicWrite(filePath, data) {
   await fs.promises.rename(tmp, filePath);
 }
 
-module.exports = { ProfileStore, validateProfileInput, generateProfileId };
+module.exports = {
+  ProfileStore,
+  validateProfileInput,
+  generateProfileId,
+  buildProfileDirectory,
+  resolveProfileDataDir,
+  PROFILE_DIR_RE,
+};

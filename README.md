@@ -2,19 +2,24 @@
 
 ![TechnoBrowse dashboard](docs/screenshots/dashboard.png)
 
-**TechnoBrowse is a lightweight desktop browser where every profile is a completely isolated, persistent browser environment.** Log into ChatGPT with one account in one profile, another account in a second profile, Gmail in a third — they never share cookies, sessions, cached files, or storage.
+**TechnoBrowse is a lightweight desktop profile manager for Google Chrome.** It creates, organizes, and launches completely independent Chrome profiles — one profile, one dedicated Chrome `user-data-dir`, zero shared state. Log into ChatGPT with one account in one profile, another account in a second profile, Gmail in a third; they never share cookies, sessions, cached files, or storage.
 
-- **No Gmail auth wall** — profiles are created instantly with just a name. Authentication happens only inside the profile windows, manually, by you.
-- **True isolation** — each profile gets its own persistent Chromium session via `session.fromPartition('persist:profile-<id>')`.
+TechnoBrowse does **not** browse the web itself. Google Chrome renders every page, runs the JavaScript, and owns every session and credential. The result: Google sign-in works (Chrome is a first-class browser, not an embedded one), pages behave exactly as in desktop Chrome, and TechnoBrowse stays tiny.
+
+- **Chrome does the browsing** — authentication, cookies, localStorage, IndexedDB, sessions, cache, downloads, extensions-grade security model: all Chrome.
+- **True isolation** — every profile gets its own directory, launched with `chrome.exe --user-data-dir=<dir>`. No two profiles ever point at the same directory.
+- **No Gmail auth wall** — profiles are created instantly with just a name. You log in manually, inside Chrome, by yourself.
 - **Persistent** — logins survive window closes, app restarts, and portable-app updates.
-- **Local-only** — `profiles.json` (metadata) plus Chromium partition directories. No telemetry, no sync, no passwords ever stored.
-- **Dark & light themes** — toggle from the header (or the toolbar) in one click; the choice is remembered. The app ships in both, with the TechnoWin look in either mode.
+- **Local-only** — `profiles.json` (metadata) plus the profile directories. No telemetry, no sync, no passwords ever stored or read.
+- **Dark & light themes** — toggle from the header in one click; the choice is remembered.
+
+**Requirement:** Google Chrome must be installed on the machine. TechnoBrowse detects it automatically (Program Files / LOCALAPPDATA, then the Windows registry) and tells you clearly if it is missing — it never falls back to a hidden embedded browser.
 
 ---
 
 ## Quick start (development)
 
-Requirements: **Node.js 20+** (22 LTS recommended) and npm. For the real desktop app you also need the Electron binary, which `npm install` fetches automatically from the Electron release servers.
+Requirements: **Node.js 20+** (22 LTS recommended) and npm.
 
 ```bash
 npm install
@@ -27,25 +32,20 @@ Or run a production build locally:
 npm start       # vite build + electron .
 ```
 
-> Note on sandboxes/offline environments: if the Electron binary cannot be
-> downloaded (GitHub release assets are required), the renderer still builds and
-> all logic tests run — see **Verification** below.
-
 ### Scripts
 
 | Command | What it does |
 |---|---|
 | `npm run dev` | Start Vite + Electron for development |
-| `npm run build` | Build the dashboard + browser-chrome bundles into `dist/` |
+| `npm run build` | Build the dashboard bundle into `dist/` |
 | `npm start` | Production build, then launch the app |
-| `npm test` | Unit tests (profile store, URL normalization) — plain node |
-| `npm run smoke` | Integration smoke test of the Electron main process with a stubbed `electron` module — verifies per-profile partitions, IPC, deletion wiping |
-| `npm run render-check` | Server-renders both React entries to catch render-time crashes |
+| `npm test` | Unit tests (profile store, Chrome detection helpers) — plain node |
+| `npm run smoke` | Main-process integration tests with a stubbed `electron` + recorded `spawn()` — verifies per-profile launch args, running-state tracking, deletion refusal, missing-Chrome handling |
+| `npm run render-check` | Server-renders the React dashboard to catch render-time crashes |
 | `npm run dom-check` | Drives the dashboard UI with jsdom — create/validate/delete flow end-to-end |
-| `npm run dom-check:chrome` | Drives the toolbar UI with a mocked Electron bridge — navigation, buttons, loading state |
 | `npm run check` | Runs every check above plus a production build |
 | `npm run preview` | Serve the production build on port 4173 (demo mode in plain browsers) |
-| `npm run visual-check` | Screenshot dashboard/toolbar/start page with headless Chromium (needs `npm run preview` running) |
+| `npm run visual-check` | Screenshot the dashboard with headless Chromium (needs `npm run preview` running) |
 | `npm run dist` | **Build the Windows x64 portable executable** into `release/` |
 | `npm run dist:dir` | Build an unpacked Windows app directory (faster, for debugging) |
 
@@ -62,18 +62,17 @@ npm install          # downloads the Electron binary
 npm run dist
 ```
 
-Output: **`release/TechnoBrowse-1.0.0-Portable-x64.exe`**
+Output: **`release/TechnoBrowse-2.0.0-Portable-x64.exe`**
 
 - No installation required — double-click and run.
 - Fully **portable**: copy it to a USB drive or `D:\MyTools\` and it works, with all profile data traveling alongside it.
-- **Data location in portable mode:** the folder containing the `.exe` is used —
-  `profiles.json` (metadata) and `user-data/Partitions/profile-<id>/` (Chromium storage) live next to the executable. Replacing the `.exe` with a newer build keeps all profiles and logins intact.
-- **Fallback:** if that folder is not writable (e.g. `C:\Program Files`), TechnoBrowse automatically uses `%APPDATA%\TechnoBrowse\` instead. The data folder is chosen once at startup by probing writability — it is never silently relocated afterward.
+- **Data location in portable mode:** the folder containing the `.exe` is used — `profiles.json` (metadata) and `profiles/profile-<id>/` (each profile's Chrome user-data directory) live next to the executable. Replacing the `.exe` with a newer build keeps all profiles and logins intact.
+- **Fallback:** if that folder is not writable (e.g. `C:\Program Files`), TechnoBrowse automatically uses `%APPDATA%\TechnoBrowse\` instead. The data root is chosen once at startup by probing writability — it is never silently relocated afterward.
 - The portable build requests the `user` execution level — **no admin rights needed**.
 
 ### CI alternative
 
-`.github/workflows/windows-portable.yml` builds and runs the full test suite on every push/dispatch and uploads the portable `.exe` as a build artifact — handy if you don't have a Windows machine handy. Trigger it from the **Actions** tab.
+`.github/workflows/windows-portable.yml` runs the full check suite on every push/dispatch and, on tagged/manual runs, builds and uploads the portable `.exe` as a build artifact. Trigger it from the **Actions** tab.
 
 ### Windows SmartScreen note
 
@@ -81,33 +80,36 @@ The executable is unsigned (code-signing certificates are intentionally out of s
 
 ---
 
-## How profile isolation works
+## How it works
 
-| Profile | Session partition | On-disk storage |
+| Profile | Data directory | Launched as |
 |---|---|---|
-| #1 `Work` | `persist:profile-9f3a…` | `user-data/Partitions/profile-9f3a…/` |
-| #2 `Personal` | `persist:profile-1c2d…` | `user-data/Partitions/profile-1c2d…/` |
-| #3 `Client` | `persist:profile-8e7b…` | `user-data/Partitions/profile-8e7b…/` |
+| #1 `Work` | `profiles/profile-9f3a…/` | `chrome.exe --user-data-dir=…\profiles\profile-9f3a… --new-window` |
+| #2 `Personal` | `profiles/profile-1c2d…/` | `chrome.exe --user-data-dir=…\profiles\profile-1c2d… --new-window` |
+| #3 `Client` | `profiles/profile-8e7b…/` | `chrome.exe --user-data-dir=…\profiles\profile-8e7b… --new-window` |
 
-- Each profile's `WebContentsView` (the invisible page container) is created with `webPreferences.session = session.fromPartition('persist:profile-<id>')` — never the default session, never another profile's session.
-- OAuth popups (`window.open`) are re-created as bare `BrowserWindow`s **in the same profile partition**, so Google/Microsoft sign-in flows work and their cookies land in the right profile.
-- Profile sessions present a **stock desktop Chrome user-agent** (the exact Chromium version Electron ships) so bot-sensitive sites like Google sign-in render their normal login flow instead of an ‘unsupported browser’ page. Downloads behave like Chrome too (save dialog + collision-free filenames).
-- Closing a profile window never clears anything. Data is removed **only** when you explicitly delete a profile: the app then closes that profile's windows, removes its metadata, calls `session.clearStorageData()/clearCache()/clearAuthCache()`, and deletes the `Partitions/profile-<id>` directory. Other profiles are untouched.
-- `profiles.json` contains **only** metadata: `id`, `name`, optional `email` label, avatar color, timestamps. No cookies, tokens, or passwords — ever.
+- **Launch** — TechnoBrowse finds the installed Google Chrome (see detection below) and spawns it with the selected profile's dedicated directory. Arguments are passed as an **array** to `child_process.spawn` with `shell: false` — no command-line string is ever constructed.
+- **Chrome detection** — `TECHNOBROWSE_CHROME_PATH` env var wins; otherwise well-known locations (`%ProgramFiles%`, `%ProgramFiles(x86)%`, `%LOCALAPPDATA%`); otherwise the Windows registry `App Paths\chrome.exe` (the same lookup `start chrome` uses), then the `WOW6432Node` `InstallLocation`. Existence is always verified on disk. Not found? A clear amber banner explains the requirement with a button to the official download page and a **re-check** button. Nothing is installed automatically and no other engine is used.
+- **Already running?** — If TechnoBrowse itself launched Chrome for a profile and that process is still alive, clicking Open does **not** spawn a second Chrome against the same directory; you get a toast and the existing window is the one to use. If a profile was launched outside the app (a `SingletonLock` is present), spawning is still safe — Chrome forwards the call to the existing instance and just opens a new window there; it never initializes one data directory twice.
+- **Deleting a profile** — refused while that profile's Chrome is running (checked via the process table and the `SingletonLock`). Otherwise the app removes ONLY that profile's metadata from `profiles.json` and deletes ONLY that profile's `profiles/profile-<id>/` directory — cookies, sessions, tokens, cache, preferences and all. Other profiles are untouched.
+- `profiles.json` contains **only** metadata: `id`, `name`, optional `email` label, avatar color, timestamps, and the relative `directory`. No cookies, tokens, or passwords — ever. Chrome never gives them to TechnoBrowse, and TechnoBrowse never reads them.
 
 ### Data layout
 
 ```
 <data root>/                     ← portable folder, or %APPDATA%\TechnoBrowse
 ├── profiles.json                ← metadata only (atomic writes, corrupt-file backup)
-└── user-data/
-    └── Partitions/
-        ├── profile-9f3a…/       ← cookies, local/session storage, IndexedDB, cache
-        ├── profile-1c2d…/
-        └── profile-8e7b…/
+└── profiles/
+    ├── profile-9f3a…/           ← Chrome user-data-dir: cookies, sessions, IndexedDB, cache, prefs
+    ├── profile-1c2d…/
+    └── profile-8e7b…/
 ```
 
-The data root is resolved **before** any session is created (`electron/paths.js`), with a writability probe and graceful fallback to `%APPDATA%`.
+The data root is resolved **before** anything is stored (`electron/paths.js`), with a writability probe and graceful fallback to `%APPDATA%`.
+
+### Migrating from the pre-2.0 embedded browser
+
+Profiles from older (Electron embedded browser) builds are kept: their metadata is read, and each is assigned its canonical `profiles/profile-<id>/` directory automatically on first launch. **Website logins do not carry over** — cookies and sessions from the old Chromium partitions cannot be moved into Chrome, and TechnoBrowse deliberately never migrates, copies, or reads them. The old `user-data/Partitions/` folder is left on disk untouched so nothing is lost by upgrading; you can delete it yourself once you've re-signed-in inside Chrome.
 
 ---
 
@@ -117,18 +119,10 @@ The data root is resolved **before** any session is created (`electron/paths.js`
 
 **Dashboard**
 - `+ Create New Profile` → enter a name (required) and an optional email label → **Create Profile**. Done. No sign-in.
-- Each card shows the avatar, name, email label, created/last-opened dates, the raw partition name (with copy button), and **Open Profile** / edit / delete actions.
-- **Open Profile** launches a dedicated browser window. Clicking it again focuses the existing window instead of duplicating it. Multiple profiles run side by side happily.
+- Each card shows the avatar, name, email label, created/last-opened dates, the profile's directory (with copy button), a live **«در حال اجرا / running»** badge when that profile's Chrome is open, and **Open in Chrome** / edit / delete actions.
+- **Open in Chrome** launches real Google Chrome with the profile's directory. Multiple profiles run side by side, fully independently.
 
-**Inside a profile window**
-- Back / Forward / Reload / Home, an address bar (Enter to navigate, `Ctrl+L` to focus), loading indicator, and your current page title in the window bar.
-- Typing `example.com` navigates; typing free text searches Google.
-- The profile chip in the toolbar shows which isolated profile you're in.
-- **Home** opens the built-in TechnoBrowse start page (clock, Google search, quick tiles) — it works offline.
-- F12 / Ctrl+Shift+I toggles DevTools for the page.
-- Log into Gmail, ChatGPT, Gemini, Claude, GitHub… manually. Credentials never touch the app — they're typed into the website, inside that profile's isolated storage.
-
-![TechnoBrowse start page](docs/screenshots/start-page.png)
+Log into Gmail, ChatGPT, Gemini, Claude, GitHub… manually, inside Chrome. Credentials never touch the app — they're typed into the website, inside that profile's isolated Chrome storage.
 
 ---
 
@@ -137,51 +131,43 @@ The data root is resolved **before** any session is created (`electron/paths.js`
 ```
 TechnoBrowse/
 ├── electron/                  ← main process (CommonJS)
-│   ├── main.js                ← app lifecycle, BrowserWindows, WebContentsViews, IPC, session wipe
-│   ├── paths.js               ← data-root resolution (portable-aware), set BEFORE any session exists
-│   ├── profileStore.js        ← atomic, corruption-tolerant profiles.json CRUD (no Electron imports)
-│   ├── urlUtils.js            ← address-bar normalization & scheme allow/block lists
-│   ├── preload.js             ← dashboard bridge (contextBridge; narrow API surface)
-│   └── chromePreload.js       ← toolbar bridge
+│   ├── main.js                ← lifecycle, dashboard window, profile CRUD + Chrome launch/delete IPC
+│   ├── paths.js               ← data-root resolution (portable-aware)
+│   ├── profileStore.js        ← atomic, corruption-tolerant profiles.json (no Electron imports)
+│   ├── chromeDetect.js        ← Chrome detection (env → well-known paths → registry) + launch args
+│   └── preload.js             ← dashboard bridge (contextBridge; narrow API surface)
 ├── src/                       ← React 19 (JavaScript, not TypeScript)
 │   ├── App.jsx                ← dashboard
-│   ├── components/            ← ProfileCard, ProfileFormModal, DeleteProfileModal, Toasts
-│   ├── browser/               ← browser chrome (toolbar) for profile windows
-│   └── lib/profileUtils.js
-├── public/start.html          ← built-in start page (loaded as file:// inside each profile)
-├── index.html / browser.html  ← Vite multi-page entries
+│   ├── components/            ← ProfileCard, ProfileFormModal, DeleteProfileModal, Toasts, ThemeToggle
+│   ├── lib/profileUtils.js    ← Persian formatting helpers + the preload bridge lookup
+│   └── lib/theme.js           ← dark/light theme persistence + application
+├── index.html                 ← Vite entry (single page)
 ├── scripts/
 │   ├── dev.mjs                ← Vite + Electron dev launcher
-│   ├── test-store.mjs         ← unit tests (profileStore + urlUtils)
-│   ├── smoke-main.cjs         ← main-process integration tests with a stubbed electron module
-│   ├── render-check.mjs       ← SSR render smoke check for both React entries
-│   ├── dom-check.mjs          ← jsdom end-to-end flow for the dashboard (create/edit/delete)
-│   └── dom-check-chrome.mjs   ← jsdom toolbar flow with a mocked Electron bridge
+│   ├── test-store.mjs         ← unit tests (profile store, Chrome detection)
+│   ├── smoke-main.cjs         ← main-process integration tests (stubbed electron + spawn)
+│   ├── render-check.mjs       ← SSR render smoke check
+│   ├── dom-check.mjs          ← jsdom end-to-end flow for the dashboard
+│   └── visual-check.mjs       ← headless screenshots of the dashboard
 ├── build/icon.png             ← app icon (1024×1024)
 ├── electron-builder.yml       ← Windows x64 portable target
 └── .github/workflows/windows-portable.yml
 ```
 
-**Renderer ↔ main IPC is explicit and narrow.** The dashboard sees only `listProfiles/createProfile/updateProfile/deleteProfile/openProfile/getAppInfo/openDataRoot/onProfilesChanged`. The toolbar sees only `ready/navigate/back/forward/reload/home/toggleDevTools/setToolbarHeight/onState/onToast/onCrashed`. No cookies, sessions, or Node APIs are exposed to either UI, and sandboxing + context isolation are on everywhere.
-
-**Navigation policy**
-- Profile views only load `http:`, `https:`, or the built-in `technobrowse://start` page; every other scheme is blocked (`will-navigate`).
-- `<webview>` attachment is denied app-wide.
-- `window.open`/OAuth popups are re-created inside the same profile partition; only `http(s)` may open.
-- The dashboard and chrome windows never navigate to the web at all.
-- Dangerous permissions (USB, serial, HID, Bluetooth, MIDI sysex) are denied; everything else behaves like a normal browser.
+**Renderer ↔ main IPC is explicit and narrow.** The dashboard sees only `listProfiles/createProfile/updateProfile/deleteProfile/openProfile/getAppInfo/getChromeStatus/refreshChromeStatus/openChromeDownload/openDataRoot/onProfilesChanged`. There is no web-contents, cookie, or session API anywhere in the surface. The renderer never receives Node.js APIs, profile directory deletions are computed **from validated metadata** (never from renderer-supplied paths), ids and directory names pass strict whitelists, the dashboard window loads only the bundled page (or the dev server), `nodeIntegration` is off and `sandbox` + `contextIsolation` are on, and the app ships no `<webview>`, no DevTools IPC, and no debugger surface.
 
 ---
 
-## Manual verification matrix (run on Windows — Tests 1–5 from the spec)
+## Manual verification matrix (run on Windows)
 
-> The sandbox this repo was assembled in cannot display Electron windows, so these five scenarios are **scripted for you to run on a real machine** (or the Actions artifact). Everything scriptable *without* a display is covered above (`npm test`, `npm run smoke`).
+> The sandbox this repo was assembled in cannot display Electron windows or Google sign-in, so the end-to-end scenarios below are **scripted for you to run on a real machine** (or the Actions artifact). Everything scriptable *without* a display is covered above (`npm test`, `npm run smoke`).
 
-1. **Session isolation** — Create A and B. Open A → `https://www.google.com` → log into any account. Open B → same site → you must be **logged out**. ✔ If you see the account from A, isolation is broken — report it.
-2. **Session persistence** — Log into any site in A. Close A's window. Reopen A. You should still be logged in. (Partition is reused; nothing is reset.)
-3. **Multiple simultaneous profiles** — Open A, B and C; log into three different accounts of the same site; confirm all three stay independent after closing and reopening.
-4. **Application restart** — Log into several sites across profiles. Quit TechnoBrowse completely. Start it again. Profiles and all sessions must be intact.
-5. **Profile deletion** — Delete one profile. Its window closes; `profiles.json` loses only that entry; `user-data/Partitions/profile-<id>/` is removed; other profiles' logins are unaffected. (Delete is irreversible and the UI warns before it happens.)
+1. **Session isolation** — Create A and B. Open A → `https://accounts.google.com` → log in. Open B → same site → you must be **logged out**.
+2. **Persistence** — Log into any site in A. Close Chrome's window. Reopen A from TechnoBrowse. You are still logged in (Chrome reuses the directory; nothing is reset).
+3. **Simultaneous profiles** — Open A, B and C; sign into three different accounts of the same service; confirm independence after closing everything and reopening.
+4. **Restart** — Log into several sites across profiles. Quit TechnoBrowse completely. Start it again. Profiles and all sessions intact.
+5. **Delete protection** — Open A, then try to delete it → the app refuses and tells you to close Chrome first. Close A's Chrome, delete it → its directory disappears, metadata loses only that entry, other profiles are unaffected.
+6. **Missing Chrome** — Rename/uninstall Chrome (or run on a machine without it) → the dashboard shows the amber banner, Open buttons are disabled, the download page opens only when you click it, and **re-check** picks Chrome up after installation.
 
 ---
 
@@ -189,25 +175,25 @@ TechnoBrowse/
 
 | Check | Result |
 |---|---|
-| `npm run build` (Vite, dashboard + chrome) | ✅ passing |
-| `npm test` — profile store, URL utils | ✅ 17/17 |
-| `npm run smoke` — main-process IPC/partitions/deletion | ✅ 9/9 |
-| `npm run render-check` — both React entries render | ✅ 2/2 |
+| `npm run build` (Vite, dashboard) | ✅ passing |
+| `npm test` — profile store, Chrome detection helpers | ✅ 16/16 |
+| `npm run smoke` — main-process IPC/launch/delete/missing-Chrome | ✅ 12/12 |
+| `npm run render-check` — dashboard renders | ✅ 1/1 |
 | `npm run dom-check` — dashboard create/edit/delete flow | ✅ 9/9 |
-| `npm run dom-check:chrome` — toolbar navigation flow | ✅ 9/9 |
-| Visual QA (`scripts/visual-check.mjs`, headless Chromium screenshots of dashboard, modals, toolbar, start page) | ✅ see `docs/screenshots/` |
-| `electron-builder --linux dir` in this sandbox | ❌ blocked — the Electron binary host (GitHub release assets) is unreachable from here |
-| Live GUI run / portable `.exe` build | ⚠️ must be run once on a normal network — `npm install && npm run dist` |
-| Manual Tests 1–5 (isolation, persistence, restart, deletion) | ⚠️ run on Windows before release |
+| Visual QA (`scripts/visual-check.mjs`) | ✅ see `docs/screenshots/` |
+| `npm run dist` (Windows portable `.exe`) | ⚠️ run on Windows or via the Actions workflow — the Electron binary host is unreachable from the build sandbox used here |
+| Manual Tests 1–6 (isolation, persistence, restart, delete protection, missing-Chrome UX) | ⚠️ run on Windows before release |
 
-`npm run preview` (or `npx vite preview`) serves the built app on port 4173 — in a normal browser the dashboard runs in a sandboxed **preview/demo mode** (profile actions are simulated); the real isolated sessions exist only inside the Electron app.
+`npm run preview` serves the built app on port 4173 — in a normal browser the dashboard runs in a sandboxed **preview/demo mode** (profile actions are simulated); launching real Chrome exists only inside the Electron app.
 
 ## Troubleshooting
 
-- **Blank/black profile window** — run `F12` in the profile window; check the console. Most often an outbound connection issue, not the app.
+- **«Google Chrome پیدا نشد» (Chrome not found)** — install Chrome from the official link shown in the app, then click **بررسی مجدد / Re-check**. If Chrome lives in a non-standard location, set `TECHNOBROWSE_CHROME_PATH` to the full `chrome.exe` path before launching TechnoBrowse.
+- **Opening a second profile while one is open** — by design, Chrome may hold the profile's directory with a `SingletonLock`; launching from TechnoBrowse then just opens another window in that same Chrome instance rather than a corrupt second instance.
 - **Portable app says the data folder is read-only** — move the `.exe` to a writable folder; TechnoBrowse then uses `%APPDATA%\TechnoBrowse` as data root instead.
-- **A fix needed after weird disk cleanup** — if `profiles.json` is ever corrupt, the app backs it up (`profiles.json.corrupt-<ts>.bak`) and starts with an empty list rather than crashing; Chromium partitions are not affected.
-- **Delete fails midway on Windows** — files may be locked by antivirus; the app retries removal, and `clearStorageData()` already emptied the profile's cookies/storage regardless.
+- **A profile won't delete** — its Chrome is running (or a stale `SingletonLock` exists from a force-killed Chrome). Close all Chrome windows for that profile and retry; the error message names the profile.
+- **`profiles.json` corrupt** — the app backs it up (`profiles.json.corrupt-<ts>.bak`) and starts with an empty list rather than crashing; Chrome data on disk is not affected.
+- **Old logins missing after the 2.0 upgrade** — logins from the pre-2.0 embedded Chromium are intentionally not migrated. Sign in again inside each Chrome profile; your metadata (names, email labels, colors) is preserved.
 
 ## License
 

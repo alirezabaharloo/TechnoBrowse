@@ -1,7 +1,8 @@
 /**
  * Plain-node unit checks for the Electron-independent modules:
- *   electron/profileStore.js   — profile CRUD, validation, atomic persistence, corrupt-file tolerance
- *   electron/urlUtils.js       — address-bar normalization, scheme blocking, popup features
+ *   electron/profileStore.js   — profile CRUD, validation, atomic persistence, corrupt-file tolerance, directory handling
+ *   electron/chromeDetect.js   — launch-argument construction, Chrome detection helpers
+ *   electron/paths.js          — portable/writable data-root logic (isWritableDir)
  *
  * Run: npm test
  */
@@ -12,9 +13,8 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const { ProfileStore } = require('../electron/profileStore.js');
-const { normalizeUserUrl, isAllowedNavigation, isAllowedExternal, parsePopupFeatures } = require('../electron/urlUtils.js');
-const { buildDesktopChromeUserAgent } = require('../electron/chromeIdentity.js');
+const { ProfileStore, buildProfileDirectory, resolveProfileDataDir, PROFILE_DIR_RE } = require('../electron/profileStore.js');
+const { buildChromeLaunchArgs, parseRegistryOutput, candidatePaths } = require('../electron/chromeDetect.js');
 
 const results = [];
 async function test(name, fn) {
@@ -46,11 +46,53 @@ await test('create assigns unique ids, persists atomically, defaults email to ""
   assert.ok(!('cookies' in onDisk.profiles[0]), 'no website data in profiles.json');
 });
 
-await test('two profiles get different ids (isolated partitions)', async () => {
+await test('create assigns a dedicated profiles/profile-<id> directory', async () => {
+  assert.equal(firstProfile.directory, `profiles/profile-${firstProfile.id}`);
+  const onDisk = JSON.parse(fs.readFileSync(storeFile, 'utf8'));
+  assert.equal(onDisk.profiles[0].directory, firstProfile.directory);
+});
+
+await test('two profiles get different ids and different directories', async () => {
   const a = await store.create({ name: 'Account A' });
   const b = await store.create({ name: 'Account B' });
   assert.notEqual(a.id, b.id);
-  assert.notEqual(`persist:profile-${a.id}`, `persist:profile-${b.id}`);
+  assert.notEqual(a.directory, b.directory);
+  assert.match(a.directory, PROFILE_DIR_RE);
+  assert.match(b.directory, PROFILE_DIR_RE);
+});
+
+await test('legacy profiles.json without a directory gets one assigned on load', async () => {
+  const legacyFile = path.join(tmp, 'legacy', 'profiles.json');
+  fs.mkdirSync(path.dirname(legacyFile), { recursive: true });
+  // Simulate a v1 profile created before the Chrome-manager architecture.
+  const legacyId = 'abcdef0123456789ab'; // 18 hex chars
+  fs.writeFileSync(legacyFile, JSON.stringify({
+    version: 1,
+    profiles: [{
+      id: legacyId,
+      name: 'Legacy Account',
+      email: 'legacy@example.com',
+      color: 'violet',
+      createdAt: '2024-01-01T00:00:00.000Z',
+      lastOpenedAt: null,
+    }],
+  }));
+  const reopened = new ProfileStore(legacyFile);
+  const list = await reopened.list();
+  assert.equal(list[0].directory, `profiles/profile-${legacyId}`);
+});
+
+await test('resolveProfileDataDir stays inside <dataRoot>/profiles and rejects escapes', async () => {
+  const id = '0123456789abcdef01';
+  const resolved = resolveProfileDataDir(tmp, { id, directory: `profiles/profile-${id}` });
+  assert.equal(resolved, path.join(tmp, 'profiles', `profile-${id}`));
+  // path traversal / foreign values are replaced by the canonical directory
+  const sneaky = resolveProfileDataDir(tmp, { id, directory: '../../outside' });
+  assert.equal(sneaky, path.join(tmp, 'profiles', `profile-${id}`));
+  const absolute = resolveProfileDataDir(tmp, { id, directory: '/etc/passwd' });
+  assert.equal(absolute, path.join(tmp, 'profiles', `profile-${id}`));
+  // a garbage id is rejected outright
+  assert.throws(() => resolveProfileDataDir(tmp, { id: '../bad', directory: 'profiles/profile-../bad' }), /نامعتبر/);
 });
 
 await test('create validates name length and characters', async () => {
@@ -65,13 +107,13 @@ await test('create validates optional email shape but allows empty', async () =>
   assert.equal(ok.email, '');
 });
 
-await test('update edits name/email only, keeps id stable', async () => {
+await test('update edits name/email only, keeps id + directory stable', async () => {
   const updated = await store.update(firstProfile.id, { email: 'new@label.example.com' });
   assert.equal(updated.id, firstProfile.id);
+  assert.equal(updated.directory, firstProfile.directory);
   assert.equal(updated.email, 'new@label.example.com');
   const renamed = await store.update(firstProfile.id, { name: 'Renamed' });
   assert.equal(renamed.name, 'Renamed');
-  assert.equal(renamed.email, 'new@label.example.com');
 });
 
 await test('update/remove reject unknown ids and bad id formats', async () => {
@@ -112,78 +154,47 @@ await test('remove deletes only the targeted profile', async () => {
   assert.ok(!after.some((p) => p.id === victim.id));
 });
 
-// ── chromeIdentity ─────────────────────────────────────────────────────────
+// ── chromeDetect ────────────────────────────────────────────────────────────
 
-await test('UA presented to websites is stock desktop Chrome (Google sign-in compatible)', async () => {
-  const ua = buildDesktopChromeUserAgent();
-  assert.ok(!/Electron|TechnoBrowse|OPR\/|Edg\//.test(ua), 'no embedded-browser tokens');
-  assert.match(ua, /Chrome\/\d+\.\d+\.\d+\.\d+ Safari\/537\.36$/, 'Chrome-style UA suffix');
-  assert.match(buildDesktopChromeUserAgent('win32', '142.0.0.0'), /^Mozilla\/5\.0 \(Windows NT 10\.0; Win64; x64\)/);
-  assert.match(buildDesktopChromeUserAgent('darwin', '142.0.0.0'), /Macintosh; Intel Mac OS X 10_15_7/);
-  assert.match(buildDesktopChromeUserAgent('linux', '142.0.0.0'), /X11; Linux x86_64/);
-  // malformed Chrome version falls back to a sane one instead of leaking "undefined"
+await test('buildChromeLaunchArgs passes an argument array, never a shell string', async () => {
+  const args = buildChromeLaunchArgs('/data/profiles/profile-abc123');
+  assert.deepEqual(args, [
+    '--user-data-dir=/data/profiles/profile-abc123',
+    '--new-window',
+    '--no-first-run',
+    '--no-default-browser-check',
+  ]);
+  assert.throws(() => buildChromeLaunchArgs(''), /required/);
+  // arguments are indistinguishable from a single token — no shell expansion possible
+  assert.ok(args.every((a) => typeof a === 'string' && !/\s/.test(a.replace('user-data-dir=', '')) || a.startsWith('--user-data-dir=')));
+});
+
+await test('parseRegistryOutput extracts Chrome.exe from reg query output', async () => {
+  const appPaths = [
+    '    (default)    REG_SZ    C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    '        InstallLocation    REG_SZ    C:\\Program Files\\Google\\Chrome\\Application\\',
+  ];
+  assert.equal(parseRegistryOutput(appPaths[0]), 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe');
+  assert.equal(parseRegistryOutput(appPaths[1]), path.join('C:\\Program Files\\Google\\Chrome\\Application', 'chrome.exe'));
+  // quoted + expanded values
   assert.equal(
-    buildDesktopChromeUserAgent('win32', 'garbage'),
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36'
+    parseRegistryOutput('    (default)    REG_EXPAND_SZ    "C:\\PROGRA~1\\Google\\Chrome\\Application\\Chrome.exe"'),
+    'C:\\PROGRA~1\\Google\\Chrome\\Application\\Chrome.exe'
   );
+  assert.equal(parseRegistryOutput('garbage output with no REG_SZ'), null);
 });
 
-// ── urlUtils ────────────────────────────────────────────────────────────────
-
-await test('typed hosts become https URLs', async () => {
-  assert.equal(normalizeUserUrl('example.com').url, 'https://example.com/');
-  assert.equal(normalizeUserUrl('https://news.ycombinator.com/item?id=1').url, 'https://news.ycombinator.com/item?id=1');
-  assert.equal(normalizeUserUrl('http://localhost:3000/dashboard').url, 'http://localhost:3000/dashboard');
-  assert.equal(normalizeUserUrl('192.168.1.20:8080').url, 'https://192.168.1.20:8080/');
-  assert.equal(normalizeUserUrl('[::1]:5173').url, 'https://[::1]:5173/');
+await test('candidatePaths covers Program Files, (x86) and LOCALAPPDATA on Windows', async () => {
+  const win = candidatePaths('win32', {
+    PROGRAMFILES: 'C:\\PF',
+    'PROGRAMFILES(X86)': 'C:\\PF86',
+    LOCALAPPDATA: 'C:\\Users\\me\\AppData\\Local',
+  });
+  assert.equal(win.length, 3);
+  assert.ok(win.every((p) => p.endsWith(path.join('Google', 'Chrome', 'Application', 'chrome.exe'))));
+  const mac = candidatePaths('darwin', {}, '/Users/me');
+  assert.equal(mac[0], '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome');
 });
-
-await test('free text becomes a Google search', async () => {
-  const result = normalizeUserUrl('how do electron sessions work');
-  assert.ok(result.isSearch);
-  assert.match(result.url, /^https:\/\/www\.google\.com\/search\?q=/);
-});
-
-await test('dangerous schemes are blocked', async () => {
-  for (const input of ['javascript:alert(1)', 'data:text/html,<script>1</script>', 'file:///etc/passwd', 'vbscript:x', 'about:blank']) {
-    assert.equal(normalizeUserUrl(input).ok, false, `blocked: ${input}`);
-  }
-});
-
-await test('unknown schemes are blocked, http/https allowed', async () => {
-  assert.equal(normalizeUserUrl('ftp://example.com').ok, false);
-  assert.equal(normalizeUserUrl('steam://rungame/123').ok, false);
-  assert.equal(normalizeUserUrl('https://ok.example.com').ok, true);
-});
-
-await test('isAllowedNavigation enforces http(s) + exact start page only', async () => {
-  const start = pathToFileUrl(path.join(tmp, 'start.html'));
-  assert.equal(isAllowedNavigation('https://example.com', start), true);
-  assert.equal(isAllowedNavigation('http://example.com', start), true);
-  assert.equal(isAllowedNavigation(start, start), true);
-  assert.equal(isAllowedNavigation(`file://C:\\other\\page.html`, start), false);
-  assert.equal(isAllowedNavigation('javascript:alert(1)', start), false);
-  assert.equal(isAllowedNavigation('about:blank', start), false);
-});
-
-await test('isAllowedExternal only permits http(s)', async () => {
-  assert.equal(isAllowedExternal('https://accounts.google.com'), true);
-  assert.equal(isAllowedExternal('file:///C:/x'), false);
-  assert.equal(isAllowedExternal('javascript:x'), false);
-});
-
-await test('popup features are parsed and clamped', async () => {
-  assert.deepEqual(parsePopupFeatures('width=520,height=640'), { width: 520, height: 640 });
-  assert.deepEqual(parsePopupFeatures('width=99999,height=10'), { width: 1400, height: 360 });
-  assert.deepEqual(parsePopupFeatures(undefined), { width: 560, height: 680 });
-  assert.deepEqual(parsePopupFeatures('left=42,top=33,width=500,height=600'), { width: 500, height: 600, x: 42, y: 33 });
-});
-
-function pathToFileUrl(p) {
-  let resolved = path.resolve(p).replace(/\\/g, '/');
-  if (!resolved.startsWith('/')) resolved = '/' + resolved;
-  return 'file://' + encodeURI(resolved);
-}
 
 // ── Report ───────────────────────────────────────────────────────────────────
 

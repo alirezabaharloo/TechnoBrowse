@@ -30,5 +30,5 @@ portable:
   requestExecutionLevel: user
 
 # Never wipe or relocate the portable data folder on updates — data lives next
-# to the exe in portable mode (profiles.json + user-data/), and profiles keep
-# working after the exe is replaced with a newer build.
+# to the exe in portable mode (profiles.json + profiles/profile-<id>/), and profiles
+# keep working after the exe is replaced with a newer build.

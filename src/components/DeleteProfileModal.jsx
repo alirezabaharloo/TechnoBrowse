@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, Cookie, Database, Loader2, ShieldCheck, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Cookie, Database, Globe, Loader2, ShieldCheck, Trash2, X } from 'lucide-react';
 
 export default function DeleteProfileModal({ profile, onClose, onConfirm }) {
   const [busy, setBusy] = useState(false);
@@ -13,7 +13,10 @@ export default function DeleteProfileModal({ profile, onClose, onConfirm }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [busy, onClose]);
 
+  const isRunning = profile?.isRunning === true;
+
   const confirm = async () => {
+    if (isRunning) return;
     setBusy(true);
     setError('');
     try {
@@ -70,6 +73,13 @@ export default function DeleteProfileModal({ profile, onClose, onConfirm }) {
             </ul>
           </div>
 
+          {isRunning && (
+            <p className="flex items-start gap-2 rounded-lg border border-amber-600/40 bg-amber-600/10 p-2.5 text-[12px] leading-6 text-amber-600">
+              <Globe size={14} className="mt-0.5 shrink-0" />
+              این پروفایل هم‌اکنون در حال اجراست. پنجرهٔ Google Chrome مربوط به آن را ببندید و سپس حذف کنید.
+            </p>
+          )}
+
           <p className="flex items-center gap-2 text-[12px] text-emerald-600">
             <ShieldCheck size={14} className="shrink-0" />
             سایر پروفایل‌ها و داده‌هایشان کاملاً دست‌نخورده می‌ماند.
@@ -86,7 +96,7 @@ export default function DeleteProfileModal({ profile, onClose, onConfirm }) {
             </button>
             <button
               onClick={confirm}
-              disabled={busy}
+              disabled={busy || isRunning}
               className="flex h-10 min-w-[132px] items-center justify-center gap-2 rounded-xl border border-rose-500/40
                 bg-gradient-to-br from-rose-600 to-rose-500 px-4 text-[13px] font-bold text-white
                 shadow-[0_6px_18px_rgba(225,29,72,0.3)] transition hover:from-rose-500 hover:to-rose-400 active:scale-[0.98]

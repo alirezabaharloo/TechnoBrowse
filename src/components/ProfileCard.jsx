@@ -2,8 +2,8 @@ import { useState } from 'react';
 import {
   CalendarDays,
   Check,
+  Globe,
   Copy,
-  ExternalLink,
   History,
   Loader2,
   Mail,
@@ -12,13 +12,15 @@ import {
 } from 'lucide-react';
 import { avatarStyle, formatDate, initialsFor, timeAgo } from '../lib/profileUtils';
 
-export default function ProfileCard({ profile, onOpen, onEdit, onDelete, opening }) {
+export default function ProfileCard({ profile, onOpen, onEdit, onDelete, opening, chromeAvailable = true }) {
   const [copied, setCopied] = useState(false);
   const isOpening = opening === profile.id;
 
-  const copyPartition = async () => {
+  const directory = profile.directory ?? `profiles/profile-${profile.id}`;
+
+  const copyDirectory = async () => {
     try {
-      await navigator.clipboard.writeText(`persist:profile-${profile.id}`);
+      await navigator.clipboard.writeText(directory);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1400);
     } catch {
@@ -67,23 +69,29 @@ export default function ProfileCard({ profile, onOpen, onEdit, onDelete, opening
         </span>
       </div>
 
-      {/* چیپ پارتیشن */}
+      {/* چیپ پوشهٔ دادهٔ Chrome */}
       <div className="mt-3 flex items-center gap-1.5">
         <code
           dir="ltr"
           className="truncate rounded-md border border-tint-line bg-ink-850 px-2 py-1 text-left font-mono text-[10.5px] text-accent-400"
-          title="پارتیشن ذخیره‌سازی کرومیوم این پروفایل"
+          title="پوشهٔ دادهٔ Chrome این پروفایل (user-data-dir)"
         >
-          persist:profile-{profile.id}
+          {directory}
         </code>
         <button
-          onClick={copyPartition}
+          onClick={copyDirectory}
           className="rounded-md p-1.5 text-slate-500 opacity-0 transition hover:bg-tint-fill hover:text-slate-200 focus:opacity-100 group-hover:opacity-100"
-          title="کپی نام پارتیشن"
-          aria-label="کپی نام پارتیشن"
+          title="کپی مسیر پوشه"
+          aria-label="کپی مسیر پوشه"
         >
           {copied ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
         </button>
+        {profile.isRunning && (
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-600/30 bg-emerald-600/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-600" />
+            در حال اجرا
+          </span>
+        )}
       </div>
 
       {/* فضای خالی برای یکسان‌سازی ارتفاع کارت‌ها */}
@@ -93,11 +101,12 @@ export default function ProfileCard({ profile, onOpen, onEdit, onDelete, opening
       <div className="mt-4 flex items-center gap-2">
         <button
           onClick={() => onOpen(profile)}
-          disabled={isOpening}
+          disabled={isOpening || chromeAvailable === false}
+          title={chromeAvailable === false ? 'ابتدا Google Chrome را نصب کنید' : 'باز کردن این پروفایل در Google Chrome'}
           className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-accent-600 to-accent-500
             text-[13px] font-bold text-white shadow-[0_6px_18px_rgba(37,99,235,0.35)]
             transition hover:from-accent-500 hover:to-accent-400 hover:shadow-[0_8px_22px_rgba(59,130,246,0.4)]
-            active:scale-[0.98] disabled:cursor-wait disabled:opacity-80"
+            active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-none"
         >
           {isOpening ? (
             <>
@@ -105,7 +114,7 @@ export default function ProfileCard({ profile, onOpen, onEdit, onDelete, opening
             </>
           ) : (
             <>
-              باز کردن پروفایل <ExternalLink size={15} />
+              باز کردن در Chrome <Globe size={15} />
             </>
           )}
         </button>

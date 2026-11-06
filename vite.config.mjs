@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath } from 'node:url';
 
-// Multi-page build: the dashboard (index.html) and the browser chrome (browser.html).
+// Single-page build: the dashboard is the only window this app creates.
 export default defineConfig({
   base: './', // relative asset URLs so the production build works over file://
   plugins: [react()],
@@ -10,10 +10,7 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
     rollupOptions: {
-      input: {
-        main: fileURLToPath(new URL('./index.html', import.meta.url)),
-        browser: fileURLToPath(new URL('./browser.html', import.meta.url)),
-      },
+      input: fileURLToPath(new URL('./index.html', import.meta.url)),
     },
   },
   server: {
