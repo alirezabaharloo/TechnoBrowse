@@ -109,16 +109,16 @@ await act(async () => {
   });
 });
 
-const urlInput = document.querySelector('input[aria-label="Address bar"]');
-check('profile chip shows the profile name', document.body.textContent.includes('Work'));
-check('address bar mirrors the current page URL', urlInput && urlInput.value === 'https://example.com/');
-check('toolbar height was reported to the main process', calls.some(([n]) => n === 'setToolbarHeight'));
+const urlInput = document.querySelector('input[aria-label="نوار نشانی"]');
+check('چیپ پروفایل نام پروفایل را نشان می‌دهد', document.body.textContent.includes('Work'));
+check('نوار نشانی URL صفحهٔ جاری را نشان می‌دهد', urlInput && urlInput.value === 'https://example.com/');
+check('ارتفاع نوار ابزار به پردازش اصلی اعلام شد', calls.some(([n]) => n === 'setToolbarHeight'));
 
 // Back button enabled (canGoBack=true), forward disabled
 const buttons = Array.from(document.querySelectorAll('button'));
-const backButton = buttons.find((b) => b.getAttribute('aria-label') === 'Back');
-const forwardButton = buttons.find((b) => b.getAttribute('aria-label') === 'Forward');
-check('back button enabled, forward disabled per state', !backButton.disabled && forwardButton.disabled);
+const backButton = buttons.find((b) => b.getAttribute('aria-label') === 'بازگشت');
+const forwardButton = buttons.find((b) => b.getAttribute('aria-label') === 'جلو');
+check('دکمهٔ بازگشت فعال و جلو غیرفعال است', !backButton.disabled && forwardButton.disabled);
 
 // Navigate by typing + Enter
 await act(async () => {
@@ -133,25 +133,25 @@ await act(async () => {
   urlInput.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
   await new Promise((r) => setTimeout(r, 20));
 });
-check('Enter in the address bar navigates with the typed input', calls.some(([n, v]) => n === 'navigate' && v === 'github.com'));
+check('Enter در نوار نشانی با همان متن ناوبری می‌کند', calls.some(([n, v]) => n === 'navigate' && v === 'github.com'));
 
 // Nav buttons call the bridge
 await act(async () => {
   backButton.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
 });
-check('back button calls goBack', calls.some(([n]) => n === 'goBack'));
+check('دکمهٔ بازگشت goBack را صدا می‌زند', calls.some(([n]) => n === 'goBack'));
 
-const reloadButton = buttons.find((b) => b.getAttribute('aria-label') === 'Reload');
+const reloadButton = buttons.find((b) => b.getAttribute('aria-label') === 'بارگذاری مجدد');
 await act(async () => {
   reloadButton.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
 });
-check('reload button calls reload', calls.some(([n]) => n === 'reload'));
+check('دکمهٔ بارگذاری دوباره reload را صدا می‌زند', calls.some(([n]) => n === 'reload'));
 
-const homeButton = buttons.find((b) => b.getAttribute('aria-label') === 'Home');
+const homeButton = buttons.find((b) => b.getAttribute('aria-label') === 'خانه');
 await act(async () => {
   homeButton.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
 });
-check('home button calls goHome', calls.some(([n]) => n === 'goHome'));
+check('دکمهٔ خانه goHome را صدا می‌زند', calls.some(([n]) => n === 'goHome'));
 
 // Loading state shows the progress indicator and spinner
 await act(async () => {
@@ -164,7 +164,7 @@ await act(async () => {
     canGoForward: false,
   });
 });
-check('loading hairline appears while loading', !!document.querySelector('.loading-bar'));
+check('نوار پیشرفت هنگام بارگذاری ظاهر می‌شود', !!document.querySelector('.loading-bar'));
 
 await act(async () => {
   root.unmount();

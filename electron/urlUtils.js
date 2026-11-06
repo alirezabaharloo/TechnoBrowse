@@ -30,9 +30,9 @@ const SCHEME_RE = /^([a-zA-Z][a-zA-Z0-9+.-]*):/;
  */
 function normalizeUserUrl(raw) {
   const input = String(raw ?? '').trim();
-  if (!input) return { ok: false, error: 'Type a URL or search term first.' };
-  if (input.length > 2048) return { ok: false, error: 'That address is too long.' };
-  if (/[\0\r\n]/.test(input)) return { ok: false, error: 'That address contains invalid characters.' };
+  if (!input) return { ok: false, error: 'ابتدا یک نشانی یا عبارت جستجو بنویسید.' };
+  if (input.length > 2048) return { ok: false, error: 'این نشانی بیش از حد طولانی است.' };
+  if (/[\0\r\n]/.test(input)) return { ok: false, error: 'این نشانی شامل نویسهٔ نامعتبر است.' };
 
   const schemeMatch = input.match(SCHEME_RE);
   if (schemeMatch) {
@@ -45,10 +45,10 @@ function normalizeUserUrl(raw) {
     }
     try {
       const parsed = new URL(input);
-      if (!parsed.hostname) return { ok: false, error: 'That URL has no host.' };
+      if (!parsed.hostname) return { ok: false, error: 'این نشانی میزبان ندارد.' };
       return { ok: true, url: parsed.toString(), isSearch: false };
     } catch {
-      return { ok: false, error: 'That URL is not valid.' };
+      return { ok: false, error: 'این نشانی معتبر نیست.' };
     }
   }
 
@@ -62,7 +62,7 @@ function normalizeUserUrl(raw) {
     try {
       const parsed = new URL(`https://${input}`);
       if (parsed.port && Number(parsed.port) > 65535) {
-        return { ok: false, error: 'That port number is not valid.' };
+        return { ok: false, error: 'این شمارهٔ درگاه معتبر نیست.' };
       }
       return { ok: true, url: parsed.toString(), isSearch: false };
     } catch {

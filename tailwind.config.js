@@ -5,33 +5,34 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Light surface scale (kept the "ink-*" names so components stay readable)
         ink: {
-          950: '#060b18',
-          900: '#0b1220',
-          850: '#0e1730',
-          800: '#111a2e',
-          750: '#16213c',
-          700: '#1c2947',
+          950: '#e3e8f4',
+          900: '#eef1f8', // page background
+          850: '#f6f7fd', // inset surfaces
+          800: '#ffffff', // cards / panels
+          750: '#e9edf6', // subtle fills & hover
+          700: '#dce2ee', // strong borders
         },
         accent: {
-          400: '#5ea3ff',
-          500: '#3b82f6',
-          600: '#2563eb',
+          400: '#3d8bff',
+          500: '#2563eb',
+          600: '#1d4ed8',
         },
       },
       fontFamily: {
         sans: [
-          'Inter',
+          'Vazirmatn',
           'Segoe UI',
+          'Tahoma',
           'system-ui',
-          '-apple-system',
           'sans-serif',
         ],
-        mono: ['JetBrains Mono', 'Cascadia Mono', 'Consolas', 'monospace'],
+        mono: ['Vazirmatn', 'Cascadia Mono', 'Consolas', 'monospace'],
       },
       boxShadow: {
-        card: '0 8px 30px rgba(2, 6, 23, 0.45)',
-        glow: '0 0 0 1px rgba(94, 163, 255, 0.35), 0 10px 40px rgba(37, 99, 235, 0.35)',
+        card: '0 10px 30px rgba(15, 23, 42, 0.10), 0 2px 6px rgba(15, 23, 42, 0.06)',
+        glow: '0 0 0 1px rgba(37, 99, 235, 0.25), 0 10px 34px rgba(37, 99, 235, 0.28)',
       },
       keyframes: {
         'fade-in': {
@@ -47,7 +48,7 @@ module.exports = {
           to: { opacity: '1', transform: 'translateY(0)' },
         },
         shimmer: {
-          '100%': { transform: 'translateX(100%)' },
+          '100%': { transform: 'translateX(-100%)' },
         },
       },
       animation: {

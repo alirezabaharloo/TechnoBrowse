@@ -53,13 +53,13 @@ await test('two profiles get different ids (isolated partitions)', async () => {
 });
 
 await test('create validates name length and characters', async () => {
-  await assert.rejects(() => store.create({ name: '' }), /name/i);
+  await assert.rejects(() => store.create({ name: '' }), /پروفایل/);
   await assert.rejects(() => store.create({ name: 'x'.repeat(61) }), /60/);
-  await assert.rejects(() => store.create({ name: 'bad\nname' }), /invalid/i);
+  await assert.rejects(() => store.create({ name: 'bad\nname' }), /نامعتبر/);
 });
 
 await test('create validates optional email shape but allows empty', async () => {
-  await assert.rejects(() => store.create({ name: 'X', email: 'not-an-email' }), /email/i);
+  await assert.rejects(() => store.create({ name: 'X', email: 'not-an-email' }), /ایمیل/);
   const ok = await store.create({ name: 'X', email: '' });
   assert.equal(ok.email, '');
 });
@@ -74,8 +74,8 @@ await test('update edits name/email only, keeps id stable', async () => {
 });
 
 await test('update/remove reject unknown ids and bad id formats', async () => {
-  await assert.rejects(() => store.update('f'.repeat(18), { name: 'Nope' }), /not found/i);
-  await assert.rejects(() => store.remove('!!bad'), /Invalid/);
+  await assert.rejects(() => store.update('f'.repeat(18), { name: 'Nope' }), /یافت نشد/);
+  await assert.rejects(() => store.remove('!!bad'), /نامعتبر/);
 });
 
 await test('markOpened sets lastOpenedAt', async () => {

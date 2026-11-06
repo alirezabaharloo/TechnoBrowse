@@ -78,7 +78,7 @@ class ProfileStore {
     let updated = null;
     await this._mutate((data) => {
       const profile = data.profiles.find((p) => p.id === id);
-      if (!profile) throw new Error('Profile not found. It may have been deleted.');
+      if (!profile) throw new Error('پروفایل یافت نشد. شاید حذف شده باشد.');
       if (name !== undefined) profile.name = name;
       if (email !== undefined) profile.email = email;
       updated = { ...profile };
@@ -92,7 +92,7 @@ class ProfileStore {
     let removed = null;
     await this._mutate((data) => {
       const index = data.profiles.findIndex((p) => p.id === id);
-      if (index === -1) throw new Error('Profile not found. It may have been deleted already.');
+      if (index === -1) throw new Error('پروفایل یافت نشد. شاید قبلاً حذف شده باشد.');
       removed = data.profiles[index];
       data.profiles.splice(index, 1);
     });
@@ -151,7 +151,7 @@ function generateProfileId() {
 
 function assertId(id) {
   if (typeof id !== 'string' || !/^[a-z0-9-]{4,64}$/i.test(id)) {
-    throw new Error('Invalid profile id.');
+    throw new Error('شناسهٔ پروفایل نامعتبر است.');
   }
 }
 
@@ -170,11 +170,11 @@ function validateProfileInput(input, { partial }) {
     const raw = String(source.name ?? '');
     // Reject control characters (tabs/newlines/etc.) before collapsing whitespace.
     // eslint-disable-next-line no-control-regex
-    if (/[\0-\x1f\x7f]/.test(raw)) throw new Error('Profile name contains invalid characters.');
+    if (/[\0-\x1f\x7f]/.test(raw)) throw new Error('نام پروفایل شامل نویسهٔ نامعتبر است.');
     const name = raw.replace(/\s+/g, ' ').trim();
-    if (!name) throw new Error('Please enter a profile name.');
+    if (!name) throw new Error('لطفاً نام پروفایل را وارد کنید.');
     if (name.length > MAX_NAME_LENGTH) {
-      throw new Error(`Profile name must be ${MAX_NAME_LENGTH} characters or fewer.`);
+      throw new Error(`نام پروفایل باید حداکثر ${MAX_NAME_LENGTH} نویسه باشد.`);
     }
     result.name = name;
   }
@@ -185,12 +185,12 @@ function validateProfileInput(input, { partial }) {
       result.email = '';
     } else {
       if (email.length > MAX_EMAIL_LENGTH) {
-        throw new Error(`Email label must be ${MAX_EMAIL_LENGTH} characters or fewer.`);
+        throw new Error(`برچسب ایمیل باید حداکثر ${MAX_EMAIL_LENGTH} نویسه باشد.`);
       }
       // eslint-disable-next-line no-control-regex
-      if (/[\0-\x1f\x7f]/.test(email)) throw new Error('Email label contains invalid characters.');
+      if (/[\0-\x1f\x7f]/.test(email)) throw new Error('برچسب ایمیل شامل نویسهٔ نامعتبر است.');
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        throw new Error('That email address does not look right. Example: name@gmail.com');
+        throw new Error('این نشانی ایمیل درست به نظر نمی‌رسد. مثال: name@gmail.com');
       }
       result.email = email.toLowerCase();
     }

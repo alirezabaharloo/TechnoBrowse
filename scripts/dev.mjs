@@ -1,6 +1,10 @@
 /**
  * Dev launcher: starts Vite, waits for it, then boots Electron against it.
  * Usage: npm run dev
+ *
+ * Spawns the JS entry points with process.execPath directly (no .cmd shims,
+ * no shell) so paths containing spaces (e.g. "C:\Users\me\My Projects\app")
+ * work unchanged on Windows.
  */
 import { spawn } from 'node:child_process';
 import http from 'node:http';
@@ -11,17 +15,17 @@ const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const PORT = 5173;
 const VITE_URL = `http://127.0.0.1:${PORT}`;
 
-const isWin = process.platform === 'win32';
-const viteBin = path.join(root, 'node_modules', '.bin', isWin ? 'vite.cmd' : 'vite');
-const electronBin = path.join(root, 'node_modules', '.bin', isWin ? 'electron.cmd' : 'electron');
+const viteBin = path.join(root, 'node_modules', 'vite', 'bin', 'vite.js');
+const electronBin = path.join(root, 'node_modules', 'electron', 'cli.js');
+const node = process.execPath;
 
 const children = new Set();
-function run(name, command, args, options = {}) {
-  const child = spawn(command, args, {
+function run(name, script, args, options = {}) {
+  const child = spawn(node, [script, ...args], {
     stdio: 'inherit',
     env: { ...process.env, ...options.env },
     cwd: root,
-    shell: isWin, // .cmd shims need a shell on Windows
+    shell: false, // critical: paths with spaces must stay intact
   });
   child.on('exit', (code, signal) => {
     children.delete(child);

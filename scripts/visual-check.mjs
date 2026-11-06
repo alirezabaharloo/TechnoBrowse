@@ -42,21 +42,21 @@ await page.waitForTimeout(600);
 await shot(page, 'dashboard');
 
 // Open the create modal
-const createBtn = page.getByRole('button', { name: /Create New Profile/i }).first();
+const createBtn = page.getByRole('button', { name: /ایجاد پروفایل جدید/ }).first();
 await createBtn.click();
 await page.waitForTimeout(350);
 await shot(page, 'create-modal');
 
 // Type a name and create the profile
-await page.locator('#profile-name').fill('Client — Acme Corp');
-await page.locator('#profile-email').fill('acme@work-mail.com');
+await page.locator('#profile-name').fill('پروژهٔ مشتری');
+await page.locator('#profile-email').fill('client@work-mail.com');
 await shot(page, 'create-modal-filled');
-await page.getByRole('button', { name: /Create Profile/i }).click();
+await page.getByRole('button', { name: 'ایجاد پروفایل', exact: true }).click();
 await page.waitForTimeout(400);
 await shot(page, 'after-create');
 
 // Delete dialog
-const deleteButtons = page.getByRole('button', { name: /Delete Client/i });
+const deleteButtons = page.getByRole('button', { name: /حذف پروژهٔ مشتری/ });
 await deleteButtons.first().click();
 await page.waitForTimeout(300);
 await shot(page, 'delete-dialog');
