@@ -105,7 +105,7 @@ function createDashboardWindow() {
     minWidth: 960,
     minHeight: 640,
     show: false,
-    backgroundColor: '#eef1f8',
+    backgroundColor: '#0b1220',
     title: 'تکنوبروز',
     autoHideMenuBar: true,
     ...(APP_ICON ? { icon: APP_ICON } : {}),
@@ -138,7 +138,7 @@ function createProfileWindow(profile) {
     minWidth: 940,
     minHeight: 600,
     show: false,
-    backgroundColor: '#eef1f8',
+    backgroundColor: '#0b1220',
     title: `${profile.name} · تکنوبروز`,
     autoHideMenuBar: true,
     ...(APP_ICON ? { icon: APP_ICON } : {}),
@@ -160,7 +160,7 @@ function createProfileWindow(profile) {
       spellcheck: true,
     },
   });
-  view.setBackgroundColor('#eef1f8');
+  view.setBackgroundColor('#0b1220');
   win.contentView.addChildView(view);
 
   const record = {
@@ -224,7 +224,7 @@ function createProfilePopup(profile, { url, features }) {
     minHeight: 240,
     title: 'تکنوبروز',
     autoHideMenuBar: true,
-    backgroundColor: '#eef1f8',
+    backgroundColor: '#0b1220',
     ...(APP_ICON ? { icon: APP_ICON } : {}),
     webPreferences: {
       ...baseWebPreferences(), // bare OAuth popup: no app APIs exposed to websites

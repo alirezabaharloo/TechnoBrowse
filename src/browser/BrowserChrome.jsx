@@ -153,18 +153,18 @@ export default function BrowserChrome() {
   }, [page.displayUrl]);
 
   const iconButton =
-    'flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-900/5 hover:text-slate-900 active:scale-95 disabled:pointer-events-none disabled:opacity-30';
+    'flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/5 hover:text-slate-100 active:scale-95 disabled:pointer-events-none disabled:opacity-30';
 
   return (
-    <div className="flex h-screen select-none flex-col overflow-hidden bg-[#eef1f8] text-slate-700">
+    <div className="flex h-screen select-none flex-col overflow-hidden bg-ink-900 text-slate-200">
       {/* ══ نوار ابزار (ارتفاعش توسط پردازش اصلی خوانده می‌شود) ══ */}
-      <div ref={toolbarRef} className="relative shrink-0 border-b border-slate-900/10 bg-gradient-to-b from-white to-[#eef1f8] shadow-[0_1px_0_rgba(255,255,255,0.7)_inset]">
+      <div ref={toolbarRef} className="relative shrink-0 border-b border-white/10 bg-gradient-to-b from-ink-850 to-ink-900 shadow-[0_1px_0_rgba(255,255,255,0.05)_inset]">
         {/* ردیف ناوبری */}
         <div className="relative flex h-14 items-center gap-1 px-2">
           {/* چیپ ایزولهٔ پروفایل */}
           {profile && (
             <div
-              className="me-1 hidden h-9 max-w-[160px] select-none items-center gap-2 rounded-lg border border-accent-600/20 bg-accent-600/[0.08] px-2 sm:flex"
+              className="me-1 hidden h-9 max-w-[160px] select-none items-center gap-2 rounded-lg border border-accent-400/20 bg-accent-400/[0.08] px-2 sm:flex"
               title={`نشست ایزوله · persist:profile-${profile.id}\nکوکی‌ها، حافظه و کش این پروفایل خصوصی است.`}
             >
               <span
@@ -174,8 +174,8 @@ export default function BrowserChrome() {
               >
                 {initialsFor(profile.name)}
               </span>
-              <span className="truncate text-[11px] font-bold text-accent-600">{profile.name}</span>
-              <ShieldCheck size={12} className="shrink-0 text-accent-600" />
+              <span className="truncate text-[11px] font-bold text-accent-400">{profile.name}</span>
+              <ShieldCheck size={12} className="shrink-0 text-accent-400" />
             </div>
           )}
 
@@ -188,7 +188,7 @@ export default function BrowserChrome() {
           </button>
           <button onClick={reload} className={iconButton} title="بارگذاری مجدد (Ctrl+R)" aria-label="بارگذاری مجدد">
             {page.isLoading ? (
-              <Loader2 size={16} className="animate-spin text-accent-600" />
+              <Loader2 size={16} className="animate-spin text-accent-400" />
             ) : (
               <RotateCw size={16} strokeWidth={2.2} />
             )}
@@ -199,10 +199,10 @@ export default function BrowserChrome() {
 
           {/* نوار نشانی (نشانی همیشه چپ‌چین) */}
           <div
-            className="mx-1 flex h-9 min-w-0 flex-1 items-center gap-2 rounded-full border border-slate-900/10 bg-white px-3.5 shadow-sm transition
-              focus-within:border-accent-600/50 focus-within:shadow-[0_0_0_3px_rgba(37,99,235,0.15)]"
+            className="mx-1 flex h-9 min-w-0 flex-1 items-center gap-2 rounded-full border border-white/10 bg-ink-800 px-3.5 shadow-sm transition
+              focus-within:border-accent-400/50 focus-within:shadow-[0_0_0_3px_rgba(37,99,235,0.15)]"
           >
-            <SchemeIcon size={13} className="shrink-0 text-slate-400" aria-hidden="true" />
+            <SchemeIcon size={13} className="shrink-0 text-slate-500" aria-hidden="true" />
             <input
               ref={urlInputRef}
               dir="ltr"
@@ -229,7 +229,7 @@ export default function BrowserChrome() {
               inputMode="url"
               aria-label="نوار نشانی"
               placeholder="جستجو در گوگل یا نشانی اینترنتی بنویسید"
-              className="h-full min-w-0 flex-1 bg-transparent text-left text-[13px] text-slate-800 placeholder-slate-400 outline-none"
+              className="h-full min-w-0 flex-1 bg-transparent text-left text-[13px] text-slate-100 placeholder-slate-500 outline-none"
             />
             {inputFocused && inputValue && (
               <button
@@ -237,7 +237,7 @@ export default function BrowserChrome() {
                   setInputValue('');
                   urlInputRef.current?.focus();
                 }}
-                className="shrink-0 rounded-full p-0.5 text-slate-400 transition hover:text-slate-700"
+                className="shrink-0 rounded-full p-0.5 text-slate-500 transition hover:text-slate-200"
                 aria-label="پاک کردن نوار نشانی"
                 title="پاک کردن"
               >
@@ -261,7 +261,7 @@ export default function BrowserChrome() {
 
         {/* نوار خطای کرش (بخشی از ارتفاع نوار ابزار است تا صفحه زیرش قرار بگیرد) */}
         {crashed && (
-          <div className="flex h-11 items-center justify-center gap-3 border-t border-rose-200 bg-rose-600 px-3 text-white">
+          <div className="flex h-11 items-center justify-center gap-3 border-t border-rose-500/30 bg-rose-600 px-3 text-white">
             <TriangleAlert size={15} className="shrink-0" />
             <p className="truncate text-[12px] font-medium">این صفحه از کار افتاد. داده‌های پروفایل شما محفوظ است.</p>
             <button
@@ -269,7 +269,7 @@ export default function BrowserChrome() {
                 setCrashed(false);
                 reload();
               }}
-              className="shrink-0 rounded-md border border-white/50 px-2.5 py-1 text-[11px] font-semibold transition hover:bg-white/15"
+              className="shrink-0 rounded-md border border-white/50 px-2.5 py-1 text-[11px] font-semibold transition hover:bg-ink-800/15"
             >
               بارگذاری دوباره
             </button>
@@ -278,10 +278,10 @@ export default function BrowserChrome() {
 
         {/* اعلان موقت خطا (داخل ناحیهٔ اندازه‌گیری‌شده تا صفحه رویش نیاید) */}
         {toast && (
-          <div className="flex h-9 items-center justify-center gap-2 border-t border-slate-900/5 bg-amber-50 px-3 text-[11.5px] text-amber-800">
+          <div className="flex h-9 items-center justify-center gap-2 border-t border-white/5 bg-amber-400/10 px-3 text-[11.5px] text-amber-200">
             <TriangleAlert size={13} className="shrink-0 text-amber-500" />
             <span className="truncate">{toast.message}</span>
-            <button onClick={() => setToast(null)} className="shrink-0 rounded p-0.5 text-amber-500 transition hover:text-amber-800" aria-label="بستن اعلان">
+            <button onClick={() => setToast(null)} className="shrink-0 rounded p-0.5 text-amber-500 transition hover:text-amber-200" aria-label="بستن اعلان">
               <X size={13} />
             </button>
           </div>
@@ -289,14 +289,14 @@ export default function BrowserChrome() {
 
         {/* اعلان حالت پیش‌نمایش (فقط خارج از اپلیکیشن دسکتاپ) */}
         {!api && (
-          <div className="flex h-9 items-center justify-center border-t border-amber-300 bg-amber-100 px-3 text-[11px] font-medium text-amber-800">
+          <div className="flex h-9 items-center justify-center border-t border-amber-400/30 bg-amber-400/10 px-3 text-[11px] font-medium text-amber-200">
             حالت پیش‌نمایش — نوار ابزار فقط داخل اپلیکیشن دسکتاپ تکنوبروز به پروفایل واقعی متصل می‌شود.
           </div>
         )}
       </div>
 
       {/* ناحیهٔ صفحه — توسط WebContentsView پروفایل (که پردازش اصلی نصب می‌کند) رندر می‌شود. */}
-      <div className="relative flex-1 bg-[#eef1f8]" aria-hidden="true" />
+      <div className="relative flex-1 bg-ink-900" aria-hidden="true" />
     </div>
   );
 }
