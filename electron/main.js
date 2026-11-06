@@ -3,34 +3,38 @@
 /**
  * TechnoBrowse — main process.
  *
- * Core idea: every profile owns one persistent Chromium session created from
- *   session.fromPartition('persist:profile-<id>')
- * Nothing else ever browses websites, and no session is ever shared between
- * profiles. Profile metadata lives in <dataRoot>/profiles.json; website data
- * lives in <sessionData>/Partitions/profile-<id>. The two never mix.
+ * TechnoBrowse is NOT a browser. It is a lightweight manager for Google Chrome
+ * profiles: it creates/lists/renames/deletes profiles and launches real Chrome
+ * with a per-profile user-data directory. Chrome then owns everything that
+ * matters for the web pages — rendering, JavaScript, authentication, cookies,
+ * localStorage, IndexedDB, sessions, cache.
+ *
+ *   <dataRoot>/profiles.json              — metadata ONLY (no website data)
+ *   <dataRoot>/profiles/profile-<id>/     — one dedicated Chrome user-data-dir
+ *                                            per profile, nothing else shared
+ *
+ * No WebContentsView, no sessions, no embedded engine, no cookie access.
  */
 
 const fs = require('fs');
 const path = require('path');
-const { pathToFileURL, fileURLToPath } = require('url');
+const { spawn } = require('child_process');
 
-const { app, BrowserWindow, WebContentsView, ipcMain, session, shell, dialog } = require('electron');
-const { DESKTOP_CHROME_USER_AGENT } = require('./chromeIdentity');
+const { app, BrowserWindow, ipcMain, shell } = require('electron');
 
-// --- 1. Resolve storage locations BEFORE anything else touches storage. ---
 const { resolveDataRoot } = require('./paths');
-const { ProfileStore } = require('./profileStore');
+const { ProfileStore, resolveProfileDataDir } = require('./profileStore');
 const {
-  normalizeUserUrl,
-  isAllowedNavigation,
-  isAllowedExternal,
-  parsePopupFeatures,
-} = require('./urlUtils');
+  CHROME_DOWNLOAD_URL,
+  buildChromeLaunchArgs,
+  detectChrome,
+} = require('./chromeDetect');
 
-const storage = resolveDataRoot(app); // sets userData + sessionData
+// --- 1. Resolve storage locations BEFORE anything else touches disk. ---
+const storage = resolveDataRoot(app); // sets userData to the portable-aware data root
 const store = new ProfileStore(storage.profilesFile);
 
-// --- 2. Single instance: re-focusing the dashboard is better than two instances fighting over the same profiles.json.
+// --- 2. Single instance: re-focus the dashboard instead of fighting over profiles.json. ---
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
@@ -40,16 +44,6 @@ if (!gotLock) {
 const IS_DEV = !app.isPackaged;
 const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || 'http://127.0.0.1:5173';
 const DIST_DIR = path.join(__dirname, '..', 'dist');
-const START_PAGE_CANDIDATES = [
-  path.join(DIST_DIR, 'start.html'),
-  path.join(__dirname, '..', 'public', 'start.html'),
-];
-const startPagePath = START_PAGE_CANDIDATES.find((p) => fs.existsSync(p)) || START_PAGE_CANDIDATES[0];
-const startPageFileUrl = pathToFileURL(startPagePath).href;
-
-const PROFILE_PARTITION_PREFIX = 'persist:profile-';
-const partitionFor = (id) => `${PROFILE_PARTITION_PREFIX}${id}`;
-const getProfileSession = (id) => session.fromPartition(partitionFor(id));
 
 const APP_ICON = (() => {
   const candidates = [
@@ -59,36 +53,69 @@ const APP_ICON = (() => {
   return candidates.find((p) => fs.existsSync(p));
 })();
 
-// --- 3. Tracking open windows so a profile can be focused instead of duplicated, and so deletion can close them.
-/** profileId -> { win: BrowserWindow, view: WebContentsView, profile: object, toolbarHeight: number } */
-const profileWindows = new Map();
-/** webContents.id -> profileId (for the profile window's chrome UI) */
-const chromeSenders = new Map();
-/** profileId -> Set<BrowserWindow> (bare popup windows spawned by that profile) */
-const profilePopups = new Map();
 const dashboardWindows = new Set();
 
-const DEFAULT_TOOLBAR_HEIGHT = 56;
-const TAB_BAR_HEIGHT = 0;
+/** profileId -> pid of the Chrome we launched (in-memory; the OS is the source of truth). */
+const launchedChrome = new Map();
+
+let chromeStatusCache = null; // lazy; cleared when the user asks for a re-check
 
 // ---------------------------------------------------------------------------
-// Window creation
+// Chrome detection (never automatic-install; never a fallback engine)
 // ---------------------------------------------------------------------------
 
-function baseWebPreferences(preloadPath) {
-  const prefs = {
+function getChromeStatus() {
+  if (!chromeStatusCache) chromeStatusCache = detectChrome();
+  return chromeStatusCache;
+}
+
+function isPidAlive(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error?.code === 'EPERM'; // exists but owned by someone else
+  }
+}
+
+/** True when THIS app launched Chrome for the profile and it still looks alive. */
+function isLaunchedByUs(id) {
+  const pid = launchedChrome.get(id);
+  return pid !== undefined && isPidAlive(pid);
+}
+
+/** Chrome drops a SingletonLock in the user-data-dir while it is in use. */
+function singletonLockExists(absoluteDir) {
+  try {
+    return fs.existsSync(path.join(absoluteDir, 'SingletonLock'));
+  } catch {
+    return false;
+  }
+}
+
+/** Conservative check used before DESTRUCTIVE operations (delete). */
+function isProfileInUse(absoluteDir, id) {
+  return isLaunchedByUs(id) || singletonLockExists(absoluteDir);
+}
+
+// ---------------------------------------------------------------------------
+// Window creation (the dashboard is the ONLY window this app creates)
+// ---------------------------------------------------------------------------
+
+function baseWebPreferences() {
+  return {
     contextIsolation: true,
     nodeIntegration: false,
     sandbox: true,
     webSecurity: true,
     allowRunningInsecureContent: false,
     spellcheck: true,
+    preload: path.join(__dirname, 'preload.js'),
   };
-  if (preloadPath) prefs.preload = preloadPath;
-  return prefs;
 }
 
-/** The app's own windows (dashboard/chrome) may only ever load our bundled pages or the dev server. */
+/** The dashboard may only ever load our bundled page or the dev server. */
 function guardAppWindowNavigation(win) {
   const isAllowedAppUrl = (url) => {
     if (IS_DEV) return url.startsWith(DEV_SERVER_URL);
@@ -110,421 +137,116 @@ function createDashboardWindow() {
     title: 'TechnoBrowse',
     autoHideMenuBar: true,
     ...(APP_ICON ? { icon: APP_ICON } : {}),
-    webPreferences: baseWebPreferences(path.join(__dirname, 'preload.js')),
+    webPreferences: baseWebPreferences(),
   });
 
   dashboardWindows.add(win);
   win.on('closed', () => dashboardWindows.delete(win));
   win.once('ready-to-show', () => win.show());
 
-  // The dashboard never opens windows or navigates away.
+  // The dashboard never opens windows; Chrome owns actual browsing.
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   guardAppWindowNavigation(win);
 
-  loadRendererPage(win, 'index.html');
+  if (IS_DEV) {
+    win.loadURL(`${DEV_SERVER_URL}/index.html`);
+  } else {
+    win.loadFile(path.join(DIST_DIR, 'index.html'));
+  }
   return win;
 }
 
-function createProfileWindow(profile) {
-  const existing = profileWindows.get(profile.id);
-  if (existing && !existing.win.isDestroyed()) {
-    if (existing.win.isMinimized()) existing.win.restore();
-    existing.win.focus();
-    return { reused: true };
-  }
-
-  const win = new BrowserWindow({
-    width: 1280,
-    height: 840,
-    minWidth: 940,
-    minHeight: 600,
-    show: false,
-    backgroundColor: '#0b1220',
-    title: `${profile.name} · TechnoBrowse`,
-    autoHideMenuBar: true,
-    ...(APP_ICON ? { icon: APP_ICON } : {}),
-    webPreferences: baseWebPreferences(path.join(__dirname, 'chromePreload.js')),
-  });
-
-  // The isolated session for THIS profile — the whole point of the app.
-  const profileSession = getProfileSession(profile.id);
-  hardenSession(profileSession);
-
-  const view = new WebContentsView({
-    webPreferences: {
-      session: profileSession, // <<< explicit per-profile partition, never the default session
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-      webSecurity: true,
-      allowRunningInsecureContent: false,
-      spellcheck: true,
-    },
-  });
-  view.setBackgroundColor('#0b1220');
-  win.contentView.addChildView(view);
-
-  const record = {
-    win,
-    view,
-    profile: { ...profile },
-    toolbarHeight: DEFAULT_TOOLBAR_HEIGHT,
-  };
-  profileWindows.set(profile.id, record);
-  chromeSenders.set(win.webContents.id, profile.id);
-
-  const layout = () => {
-    const [width, height] = win.getContentSize();
-    const top = record.toolbarHeight + TAB_BAR_HEIGHT;
-    view.setBounds({
-      x: 0,
-      y: top,
-      width: Math.max(0, width),
-      height: Math.max(0, height - top),
-    });
-  };
-  win.on('resize', layout);
-  win.once('ready-to-show', () => {
-    layout();
-    win.show();
-  });
-
-  // --- wire up the page view -------------------------------------------------
-  attachNavigationGuards(view.webContents, profile);
-  attachStateForwarding(view.webContents, record);
-
-  win.on('closed', () => {
-    chromeSenders.delete(win.webContents.id);
-    profileWindows.delete(profile.id);
-    closeProfilePopups(profile.id);
-  });
-
-  loadRendererPage(win, 'browser.html');
-  guardAppWindowNavigation(win);
-  // Home = the built-in start page (bundled with the app, no network needed).
-  view.webContents.loadFile(startPagePath).catch((error) => {
-    process.stderr.write(`[technobrowse] failed to load start page: ${error.message}\n`);
-  });
-
-  store.markOpened(profile.id);
-  return { reused: false };
-}
-
-function createProfilePopup(profile, { url, features }) {
-  // OAuth / window.open flows must keep working, inside the SAME partition,
-  // so cookies set during sign-in are visible to the main profile window.
-  // The session has to be assigned when the webContents is created, so it is
-  // passed straight into webPreferences here.
-  const popupFeatures = parsePopupFeatures(features);
-  const popup = new BrowserWindow({
-    width: popupFeatures.width,
-    height: popupFeatures.height,
-    ...(popupFeatures.x !== undefined ? { x: popupFeatures.x } : {}),
-    ...(popupFeatures.y !== undefined ? { y: popupFeatures.y } : {}),
-    minWidth: 320,
-    minHeight: 240,
-    title: 'TechnoBrowse',
-    autoHideMenuBar: true,
-    backgroundColor: '#0b1220',
-    ...(APP_ICON ? { icon: APP_ICON } : {}),
-    webPreferences: {
-      ...baseWebPreferences(), // bare OAuth popup: no app APIs exposed to websites
-      session: getProfileSession(profile.id),
-    },
-  });
-
-  trackPopup(profile.id, popup);
-  attachNavigationGuards(popup.webContents, profile);
-  popup.loadURL(url).catch(() => {});
-  return popup;
-}
-
-function trackPopup(profileId, popup) {
-  if (!profilePopups.has(profileId)) profilePopups.set(profileId, new Set());
-  const set = profilePopups.get(profileId);
-  set.add(popup);
-  popup.on('closed', () => {
-    set.delete(popup);
-    if (set.size === 0) profilePopups.delete(profileId);
-  });
-}
-
-function closeProfilePopups(profileId) {
-  const set = profilePopups.get(profileId);
-  if (!set) return;
-  for (const popup of Array.from(set)) {
-    if (!popup.isDestroyed()) popup.destroy();
-  }
-  profilePopups.delete(profileId);
-}
-
-function loadRendererPage(win, page) {
-  if (IS_DEV) {
-    win.loadURL(`${DEV_SERVER_URL}/${page}`);
-  } else {
-    win.loadFile(path.join(DIST_DIR, page));
-  }
-}
-
 // ---------------------------------------------------------------------------
-// Security: sessions, navigation guards, window-open policy
+// Profile lifecycle
 // ---------------------------------------------------------------------------
 
-function hardenSession(profileSession) {
-  // 1. Present a stock desktop Chrome UA. Google's sign-in (and other
-  //    bot-sensitive pages) refuse embedded browsers that advertise Electron:
-  //    they serve "The browser you're using doesn't support JavaScript".
-  if (typeof profileSession.setUserAgent === 'function') {
+async function profilesWithStatus() {
+  const list = await store.list();
+  return list.map((profile) => {
+    let absoluteDir = null;
     try {
-      profileSession.setUserAgent(DESKTOP_CHROME_USER_AGENT);
-    } catch (error) {
-      process.stderr.write(`[technobrowse] failed to set profile User-Agent: ${error.message}\n`);
-    }
-  }
-
-  // 2. Downloads behave like Chrome: a save dialog per file, unique names.
-  attachDownloadHandler(profileSession);
-
-  // 3. Deny sensitive hardware-ish permissions outright; everything else behaves
-  //    like a normal browser (user is prompted by Chromium where applicable).
-  const denied = new Set(['usb', 'serial', 'hid', 'midiSysex', 'bluetooth']);
-  profileSession.setPermissionRequestHandler((webContents, permission, callback) => {
-    callback(!denied.has(permission));
-  });
-  profileSession.setPermissionCheckHandler((webContents, permission) => !denied.has(permission));
-}
-
-// Pick a collision-free path inside the user's Downloads folder.
-function uniqueDownloadPath(dir, filename) {
-  const safeName = path.basename(filename || 'download') || 'download';
-  const ext = path.extname(safeName);
-  const base = safeName.slice(0, safeName.length - ext.length) || 'download';
-  let candidate = path.join(dir, safeName);
-  let counter = 1;
-  try {
-    while (fs.existsSync(candidate) && counter < 1000) {
-      candidate = path.join(dir, `${base} (${counter})${ext}`);
-      counter += 1;
-    }
-  } catch {
-    /* best effort — Chromium will still ask the OS for an available name */
-  }
-  return candidate;
-}
-
-function attachDownloadHandler(profileSession) {
-  // In smoke tests the session stub has no event emitter — downloads just no-op.
-  if (!profileSession || typeof profileSession.on !== 'function') return;
-  profileSession.on('will-download', (event, item) => {
-    try {
-      const filename = item.getFilename() || 'download';
-      const downloadsDir = app.getPath('downloads');
-      let chosen = null;
-      if (dialog && typeof dialog.showSaveDialogSync === 'function') {
-        // Synchronous prompt inside will-download (Chromium waits for it),
-        // same UX as Chrome's "Ask where to save each file".
-        chosen = dialog.showSaveDialogSync({
-          title: 'ذخیرهٔ فایل',
-          defaultPath: uniqueDownloadPath(downloadsDir, filename),
-        });
-      } else {
-        chosen = uniqueDownloadPath(downloadsDir, filename); // silent save, like Chrome with prompting off
-      }
-      if (!chosen) {
-        item.cancel();
-        return;
-      }
-      item.setSavePath(chosen);
-    } catch (error) {
-      process.stderr.write(`[technobrowse] download failed: ${error.message}\n`);
-      try {
-        item.cancel();
-      } catch {
-        /* item already gone */
-      }
-    }
-  });
-}
-
-function attachNavigationGuards(contents, profile) {
-  // Only http(s) and the built-in start page may load in a profile view.
-  contents.on('will-navigate', (event, url) => {
-    if (!isAllowedNavigation(url, startPageFileUrl)) {
-      event.preventDefault();
-      notifyChrome(contents, 'chrome:toast', {
-        message: 'این پیوند مسدود شد چون از یک شمای نشانی پشتیبانی‌نشده استفاده می‌کند.',
-        tone: 'error',
-      });
-    }
-  });
-
-  contents.setWindowOpenHandler(({ url, features, disposition }) =>
-    handleProfileWindowOpen(profile, url, features, disposition)
-  );
-
-  // The <webview> tag must never be used to bypass our session assignment.
-  contents.on('will-attach-webview', (event) => event.preventDefault());
-}
-
-function handleProfileWindowOpen(profile, url, features) {
-  if (!isAllowedExternal(url)) {
-    return { action: 'deny' };
-  }
-  createProfilePopup(profile, { url, features });
-  return { action: 'deny' }; // we open our own session-scoped window instead
-}
-
-/** Push loading/url/title/history state from the page view into the chrome UI. */
-function attachStateForwarding(contents, record) {
-  const send = () => sendChromeState(record);
-  contents.on('did-start-loading', send);
-  contents.on('did-stop-loading', send);
-  contents.on('did-navigate', send);
-  contents.on('did-navigate-in-page', send);
-  contents.on('page-title-updated', send);
-  contents.on('did-finish-load', send);
-  contents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL, isMainFrame) => {
-    if (!isMainFrame) return;
-    if (errorCode === -3) return; // ERR_ABORTED — normal during redirects/stop
-    send();
-    try {
-      record.win.webContents.send('chrome:toast', {
-        message: `بارگذاری صفحه ممکن نشد (${errorDescription || errorCode}). نشانی و اتصال خود را بررسی کنید.`,
-        tone: 'error',
-      });
+      absoluteDir = resolveProfileDataDir(storage.dataRoot, profile);
     } catch {
-      /* window already gone */
+      absoluteDir = null;
     }
-  });
-  contents.on('render-process-gone', (event, details) => {
-    try {
-      record.win.webContents.send('chrome:crashed', { reason: details?.reason || 'unknown' });
-    } catch {
-      /* window already gone */
-    }
+    return {
+      ...profile,
+      isRunning: absoluteDir ? isProfileInUse(absoluteDir, profile.id) : isLaunchedByUs(profile.id),
+    };
   });
 }
 
-function sendChromeState(record) {
-  try {
-    if (record.win.isDestroyed()) return;
-    const contents = record.view.webContents;
-    const history = contents.navigationHistory;
-    const canGoBack = history?.canGoBack?.() ?? (typeof contents.canGoBack === 'function' ? contents.canGoBack() : false);
-    const canGoForward =
-      history?.canGoForward?.() ?? (typeof contents.canGoForward === 'function' ? contents.canGoForward() : false);
-    const rawUrl = contents.getURL();
-    record.win.webContents.send('chrome:state', {
-      url: rawUrl,
-      displayUrl: displayUrlFor(rawUrl),
-      title: contents.getTitle(),
-      isLoading: contents.isLoading(),
-      canGoBack,
-      canGoForward,
-    });
-    const pageTitle = contents.getTitle();
-    record.win.setTitle(pageTitle ? `${pageTitle} · ${record.profile.name} — TechnoBrowse` : `${record.profile.name} — TechnoBrowse`);
-  } catch {
-    /* window mid-teardown */
-  }
-}
+async function launchProfile(id) {
+  const profile = await store.get(id);
+  if (!profile) throw new Error('پروفایل یافت نشد. شاید حذف شده باشد.');
 
-function displayUrlFor(url) {
-  // Show a friendly pseudo-URL for the built-in start page.
-  if (url && url.startsWith('file://') && normalizeFileForCompare(url) === normalizeFileForCompare(startPageFileUrl)) {
-    return 'technobrowse://start';
+  const status = getChromeStatus();
+  if (!status.found) {
+    const error = new Error(
+      'Google Chrome پیدا نشد. برای باز کردن پروفایل‌ها باید Google Chrome نصب باشد.'
+    );
+    error.code = 'CHROME_NOT_FOUND';
+    throw error;
   }
-  return url || '';
-}
 
-function normalizeFileForCompare(url) {
-  try {
-    let p = fileURLToPath(url).replace(/\\/g, '/');
-    if (p.endsWith('/')) p = p.slice(0, -1);
-    return p.toLowerCase();
-  } catch {
-    return String(url).toLowerCase();
+  const absoluteDir = resolveProfileDataDir(storage.dataRoot, profile);
+  fs.mkdirSync(absoluteDir, { recursive: true });
+
+  // If we launched Chrome for this profile and it's still alive, don't spawn a
+  // second process against the same user-data directory — ask the user to use
+  // the existing window instead.
+  if (isLaunchedByUs(profile.id)) {
+    return { ok: true, reused: true };
   }
-}
 
-function notifyChrome(contents, channel, payload) {
-  // Find the record whose *page* webContents matches, else fall back to any sender match.
-  for (const record of profileWindows.values()) {
-    if (record.view.webContents === contents) {
-      try {
-        record.win.webContents.send(channel, payload);
-      } catch {
-        /* window gone */
-      }
-      return;
-    }
+  // A stale SingletonLock (e.g. from a Chrome that was already running before
+  // TechnoBrowse started) is NOT an error: Chrome forwards the invocation to
+  // the existing instance and simply opens a new window there — it never
+  // initializes the directory twice. Safe to spawn.
+  const child = spawn(status.executablePath, buildChromeLaunchArgs(absoluteDir), {
+    shell: false,
+    detached: true,
+    stdio: 'ignore',
+    windowsHide: false,
+  });
+  child.unref();
+  if (typeof child.pid === 'number') {
+    launchedChrome.set(profile.id, child.pid);
   }
-}
+  child.on('error', (error) => {
+    launchedChrome.delete(profile.id);
+    process.stderr.write(`[technobrowse] failed to launch Chrome: ${error.message}\n`);
+  });
 
-// ---------------------------------------------------------------------------
-// Profile deletion: metadata + Chromium partition wiped together, atomically enough for a desktop app.
-// ---------------------------------------------------------------------------
+  await store.markOpened(profile.id);
+  return { ok: true, reused: false, pid: child.pid ?? null };
+}
 
 async function deleteProfileCompletely(id) {
-  // 1. Close every window belonging to this profile (main window + popups).
-  closeProfilePopups(id);
-  const record = profileWindows.get(id);
-  if (record) {
-    chromeSenders.delete(record.win.webContents.id);
-    profileWindows.delete(id);
-    try {
-      record.win.destroy();
-    } catch {
-      /* already gone */
-    }
-  }
-  // Give Chromium a beat to release file handles before wiping the partition.
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  const profile = await store.get(id);
+  if (!profile) throw new Error('پروفایل یافت نشد. شاید قبلاً حذف شده باشد.');
 
-  // 2. Remove metadata (throws if missing — caller surfaces the error).
+  const absoluteDir = resolveProfileDataDir(storage.dataRoot, profile);
+  if (isProfileInUse(absoluteDir, id)) {
+    throw new Error(
+      `پروفایل «${profile.name}» در حال اجراست. ابتدا پنجرهٔ Google Chrome مربوط به این پروفایل را ببندید و دوباره تلاش کنید.`
+    );
+  }
+
+  // 1. Remove metadata first (throws if missing — caller surfaces the error).
   const removed = await store.remove(id);
 
-  // 3. Wipe the persistent session: cookies, storage, cache, auth caches, then the on-disk partition folder.
-  await wipeProfilePartition(id);
+  // 2. Wipe ONLY this profile's Chrome user-data directory (cookies, storage,
+  //    sessions, cache, prefs — Chrome manages it; we remove the folder).
+  try {
+    await fs.promises.rm(absoluteDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 150 });
+  } catch (error) {
+    // Metadata is gone; the leftover directory is harmless garbage on disk.
+    process.stderr.write(`[technobrowse] could not remove ${absoluteDir}: ${error.message}\n`);
+  }
 
+  launchedChrome.delete(id);
   return removed;
-}
-
-async function wipeProfilePartition(id) {
-  const partitionName = `profile-${id}`; // folder name used by persist: partitions
-  try {
-    const ses = session.fromPartition(partitionFor(id));
-    await ses.clearStorageData(); // cookies, localStorage, sessionStorage, IndexedDB, service workers, cacheStorage...
-    await ses.clearCache();
-    await ses.clearAuthCache();
-    try {
-      await ses.clearHostResolverCache();
-    } catch {
-      /* older Electron */
-    }
-    try {
-      if (typeof ses.clearCodeCaches === 'function') await ses.clearCodeCaches({});
-    } catch {
-      /* not supported everywhere */
-    }
-    if (typeof ses.flushStorageData === 'function') {
-      try {
-        await ses.flushStorageData();
-      } catch {
-        /* ignore */
-      }
-    }
-  } catch (error) {
-    process.stderr.write(`[technobrowse] session clear for profile ${id} failed: ${error.message}\n`);
-  }
-
-  const partitionDir = path.join(app.getPath('sessionData'), 'Partitions', partitionName);
-  try {
-    await fs.promises.rm(partitionDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 150 });
-  } catch (error) {
-    // Not fatal: clearStorageData already emptied the data Chromium knows about.
-    process.stderr.write(`[technobrowse] could not remove partition dir ${partitionDir}: ${error.message}\n`);
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -542,10 +264,16 @@ function broadcastProfilesChanged() {
 }
 
 function registerDashboardIpc() {
-  ipcMain.handle('profiles:list', async () => store.list());
+  ipcMain.handle('profiles:list', async () => profilesWithStatus());
 
   ipcMain.handle('profiles:create', async (_event, payload) => {
     const profile = await store.create(payload ?? {});
+    // Create the Chrome user-data directory eagerly so it always exists.
+    try {
+      fs.mkdirSync(resolveProfileDataDir(storage.dataRoot, profile), { recursive: true });
+    } catch (error) {
+      process.stderr.write(`[technobrowse] could not create profile directory: ${error.message}\n`);
+    }
     broadcastProfilesChanged();
     return profile;
   });
@@ -553,12 +281,6 @@ function registerDashboardIpc() {
   ipcMain.handle('profiles:update', async (_event, payload) => {
     const id = String(payload?.id ?? '');
     const profile = await store.update(id, payload ?? {});
-    // Keep the record + title in any open window in sync.
-    const record = profileWindows.get(id);
-    if (record) {
-      record.profile = { ...record.profile, ...profile };
-      sendChromeState(record);
-    }
     broadcastProfilesChanged();
     return profile;
   });
@@ -573,135 +295,44 @@ function registerDashboardIpc() {
 
   ipcMain.handle('profiles:open', async (_event, payload) => {
     const id = String(payload?.id ?? '');
-    const profile = await store.get(id);
-    if (!profile) throw new Error('پروفایل یافت نشد. شاید حذف شده باشد.');
-    const result = createProfileWindow(profile);
+    if (!/^[a-z0-9-]{4,64}$/i.test(id)) throw new Error('شناسهٔ پروفایل نامعتبر است.');
+    const result = await launchProfile(id);
     broadcastProfilesChanged();
     return result;
   });
 
   ipcMain.handle('app:info', async () => {
     const profiles = await store.list();
+    const chrome = getChromeStatus();
     return {
       version: app.getVersion(),
       dataRoot: storage.dataRoot,
-      sessionData: app.getPath('sessionData'),
       portable: storage.portable,
       profileCount: profiles.length,
-      partitionPrefix: PROFILE_PARTITION_PREFIX,
+      chromeFound: chrome.found === true,
     };
+  });
+
+  ipcMain.handle('app:chrome-status', async () => getChromeStatus());
+
+  ipcMain.handle('app:refresh-chrome', async () => {
+    chromeStatusCache = null;
+    return getChromeStatus();
+  });
+
+  ipcMain.handle('app:open-chrome-download', async () => {
+    // Opened ONLY from an explicit click in the UI; never automatically.
+    await shell.openExternal(CHROME_DOWNLOAD_URL);
+    return { ok: true };
   });
 
   ipcMain.handle('app:open-data-root', async () => {
     try {
-      const { shell } = require('electron');
       const error = await shell.openPath(storage.dataRoot);
       return error ? { error } : { ok: true };
     } catch (error) {
       return { error: error?.message || 'باز کردن پوشهٔ داده ممکن نشد.' };
     }
-  });
-}
-
-// ---------------------------------------------------------------------------
-// IPC — browser chrome (toolbar)
-// ---------------------------------------------------------------------------
-
-function recordFromChromeSender(sender) {
-  const profileId = chromeSenders.get(sender.id);
-  if (!profileId) return null;
-  const record = profileWindows.get(profileId);
-  if (!record) return null;
-  return record;
-}
-
-function registerChromeIpc() {
-  ipcMain.handle('chrome:ready', async (event) => {
-    const record = recordFromChromeSender(event.sender);
-    if (!record) throw new Error('این نوار ابزار به پروفایلی متصل نیست.');
-    sendChromeState(record);
-    return {
-      id: record.profile.id,
-      name: record.profile.name,
-      email: record.profile.email,
-      color: record.profile.color,
-      partition: partitionFor(record.profile.id),
-    };
-  });
-
-  ipcMain.handle('chrome:navigate', async (event, payload) => {
-    const record = recordFromChromeSender(event.sender);
-    if (!record) return { ok: false, error: 'پنجرهٔ پروفایلی متصل نیست.' };
-    const normalized = normalizeUserUrl(payload?.input ?? '');
-    if (!normalized.ok) return normalized;
-    try {
-      await record.view.webContents.loadURL(normalized.url);
-      sendChromeState(record);
-      return { ok: true, url: normalized.url, isSearch: normalized.isSearch === true };
-    } catch (error) {
-      return { ok: false, error: error?.message || 'ناوبری انجام نشد.' };
-    }
-  });
-
-  ipcMain.handle('chrome:go-back', async (event) => {
-    const record = recordFromChromeSender(event.sender);
-    if (!record) return;
-    const contents = record.view.webContents;
-    const history = contents.navigationHistory;
-    if (history?.canGoBack?.()) history.goBack();
-    else if (typeof contents.canGoBack === 'function' && contents.canGoBack()) contents.goBack();
-  });
-
-  ipcMain.handle('chrome:go-forward', async (event) => {
-    const record = recordFromChromeSender(event.sender);
-    if (!record) return;
-    const contents = record.view.webContents;
-    const history = contents.navigationHistory;
-    if (history?.canGoForward?.()) history.goForward();
-    else if (typeof contents.canGoForward === 'function' && contents.canGoForward()) contents.goForward();
-  });
-
-  ipcMain.handle('chrome:reload', async (event) => {
-    const record = recordFromChromeSender(event.sender);
-    if (!record) return;
-    record.view.webContents.reload();
-  });
-
-  ipcMain.handle('chrome:go-home', async (event) => {
-    const record = recordFromChromeSender(event.sender);
-    if (!record) return;
-    await record.view.webContents.loadFile(startPagePath);
-    sendChromeState(record);
-  });
-
-  ipcMain.handle('chrome:toggle-devtools', async (event) => {
-    const record = recordFromChromeSender(event.sender);
-    if (!record) return;
-    const contents = record.view.webContents;
-    if (contents.isDevToolsOpened()) contents.closeDevTools();
-    else contents.openDevTools({ mode: 'detach' });
-  });
-
-  ipcMain.handle('chrome:set-toolbar-height', async (event, payload) => {
-    const record = recordFromChromeSender(event.sender);
-    if (!record) return;
-    const height = Math.round(Number(payload?.height));
-    if (!Number.isFinite(height)) return;
-    record.toolbarHeight = Math.min(168, Math.max(40, height));
-    const [width, contentHeight] = record.win.getContentSize();
-    const top = record.toolbarHeight + TAB_BAR_HEIGHT;
-    record.view.setBounds({
-      x: 0,
-      y: top,
-      width: Math.max(0, width),
-      height: Math.max(0, contentHeight - top),
-    });
-  });
-
-  ipcMain.handle('chrome:focus-url', async (event) => {
-    const record = recordFromChromeSender(event.sender);
-    if (!record) return;
-    sendChromeState(record);
   });
 }
 
@@ -713,7 +344,6 @@ const SMOKE_TEST = process.env.TECHNOBROWSE_SMOKE_TEST === '1';
 
 app.whenReady().then(async () => {
   registerDashboardIpc();
-  registerChromeIpc();
   createDashboardWindow();
 
   app.on('activate', () => {
@@ -721,12 +351,12 @@ app.whenReady().then(async () => {
   });
 
   if (SMOKE_TEST) {
-    // Headless-CI style sanity check: create data, open+close a profile window, then exit.
     setTimeout(async () => {
       let ok = true;
       try {
         const profiles = await store.list();
-        process.stdout.write(`SMOKE_TEST profiles=${profiles.length} dataRoot=${storage.dataRoot}\n`);
+        const chrome = getChromeStatus();
+        process.stdout.write(`SMOKE_TEST profiles=${profiles.length} dataRoot=${storage.dataRoot} chromeFound=${chrome.found}\n`);
         process.stdout.write('SMOKE_TEST OK\n');
       } catch (error) {
         ok = false;
@@ -734,7 +364,7 @@ app.whenReady().then(async () => {
       } finally {
         process.exit(ok ? 0 : 1);
       }
-    }, 2500);
+    }, 1500);
   }
 });
 
@@ -752,12 +382,6 @@ app.on('window-all-closed', () => {
   app.quit();
 });
 
-app.on('web-contents-created', (_event, contents) => {
-  // Blanket defense in depth: no <webview> attachments anywhere.
-  contents.on('will-attach-webview', (event) => event.preventDefault());
-});
-
-// Surface unexpected errors instead of dying silently.
 process.on('uncaughtException', (error) => {
   process.stderr.write(`[technobrowse] uncaughtException: ${error?.stack || error}\n`);
 });

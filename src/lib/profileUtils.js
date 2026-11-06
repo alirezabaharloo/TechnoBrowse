@@ -63,7 +63,3 @@ export function formatDate(iso) {
 export function nativeBridge() {
   return typeof window !== 'undefined' && window.technobrowse ? window.technobrowse : null;
 }
-
-export function chromeBridge() {
-  return typeof window !== 'undefined' && window.technoBrowseChrome ? window.technoBrowseChrome : null;
-}

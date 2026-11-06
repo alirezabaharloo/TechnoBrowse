@@ -3,20 +3,20 @@
 /**
  * Data-directory resolution for TechnoBrowse.
  *
- * IMPORTANT: this must run BEFORE the app is ready and BEFORE any
- * session.fromPartition('persist:...') call, so Chromium stores every
- * profile's partition inside our chosen directory.
- *
- * Resolution order:
- *   1. Next to the portable executable (electron-builder "portable" target sets
- *      PORTABLE_EXECUTABLE_DIR) — only if that directory is writable.
- *   2. The per-user data directory (%APPDATA%/TechnoBrowse on Windows).
+ * TechnoBrowse is a profile MANAGER for Google Chrome — it no longer embeds a
+ * browser engine of its own, so Website storage (cookies, localStorage,
+ * IndexedDB, cache) lives entirely inside each profile's private
+ * Chrome user-data directory, which is created lazily on first launch.
  *
  * Layout produced:
- *   <dataRoot>/profiles.json          — profile metadata ONLY (no cookies/passwords)
- *   <dataRoot>/user-data/Partitions/* — Chromium storage (cookies, localStorage,
- *                                       IndexedDB, cache, ...) one folder per
- *                                       persistent session partition.
+ *   <dataRoot>/profiles.json         — profile metadata ONLY (no website data)
+ *   <dataRoot>/profiles/profile-<id>/ — one dedicated Chrome user-data directory
+ *                                        per profile (created on first launch)
+ *
+ * Where <dataRoot> is:
+ *   1. Next to the portable executable (electron-builder "portable" target sets
+ *      PORTABLE_EXECUTABLE_DIR) — only if that directory is writable.
+ *   2. The per-user data directory (%APPDATA%/TechnoBrowse on Windows) otherwise.
  */
 
 const fs = require('fs');
@@ -35,9 +35,9 @@ function isWritableDir(dir) {
 }
 
 /**
- * Resolve and apply the userData / sessionData paths.
+ * Resolve and apply the data-root location.
  * @param {import('electron').App} app
- * @returns {{ dataRoot: string, sessionData: string, profilesFile: string, portable: boolean }}
+ * @returns {{ dataRoot: string, profilesDir: string, profilesFile: string, portable: boolean }}
  */
 function resolveDataRoot(app) {
   const portableDir = process.env.PORTABLE_EXECUTABLE_DIR; // set by electron-builder portable target
@@ -50,14 +50,13 @@ function resolveDataRoot(app) {
   for (const candidate of candidates) {
     if (isWritableDir(candidate.dir)) {
       const dataRoot = candidate.dir;
-      const sessionData = path.join(dataRoot, 'user-data');
+      const profilesDir = path.join(dataRoot, 'profiles');
       try {
-        fs.mkdirSync(sessionData, { recursive: true });
+        fs.mkdirSync(profilesDir, { recursive: true });
         app.setPath('userData', dataRoot);
-        app.setPath('sessionData', sessionData);
         return {
           dataRoot,
-          sessionData,
+          profilesDir,
           profilesFile: path.join(dataRoot, 'profiles.json'),
           portable: candidate.portable,
         };

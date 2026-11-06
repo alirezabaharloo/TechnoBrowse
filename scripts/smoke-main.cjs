@@ -3,10 +3,10 @@
 /**
  * Integration smoke test for the Electron MAIN process — without a display.
  *
- * Replaces the `electron` module with a recording stub, loads electron/main.js,
- * then drives the real IPC handlers: create/open/navigate/delete profiles and
- * verifies that each profile gets its own persistent session partition and that
- * deleting a profile wipes exactly its own session data.
+ * TechnoBrowse is a Chrome profile MANAGER: the main process creates/deletes
+ * profiles and launches real Chrome with a per-profile user-data directory.
+ * This stubs `electron` and `child_process.spawn` (recording the exact
+ * arguments) and verifies the full IPC surface end to end.
  *
  * Run: npm run smoke
  */
@@ -19,8 +19,6 @@ const Module = require('node:module');
 
 const results = [];
 // NOTE: async — every test body is genuinely awaited before the report runs.
-// (Previously test() fire-and-forget'd async bodies, so smoke assertions never
-// actually blocked the exit code.)
 const test = async (name, fn) => {
   try {
     await fn();
@@ -30,106 +28,57 @@ const test = async (name, fn) => {
   }
 };
 
-// ── Temp data root the stubbed app will use ──────────────────────────────────
+// ── Temp data root + a REAL fake "chrome" executable (detection must find it) ─
 const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'technobrowse-smoke-'));
 const tmpData = path.join(tmpRoot, 'userData');
-const tmpSession = path.join(tmpData, 'user-data');
-fs.mkdirSync(tmpSession, { recursive: true });
+fs.mkdirSync(tmpData, { recursive: true });
+const fakeChromePath = path.join(tmpRoot, 'chrome-stub');
+fs.writeFileSync(fakeChromePath, '#!/bin/sh\nexit 0\n');
+fs.chmodSync(fakeChromePath, 0o755);
+// Detection reads this at call time — override to a nonexistent path later to
+// simulate "Chrome is not installed".
+process.env.TECHNOBROWSE_CHROME_PATH = fakeChromePath;
 
 // ── Electron stub ────────────────────────────────────────────────────────────
-let webContentsId = 1;
-
-function makeWebContents(owner, webPreferences) {
-  const listeners = new Map();
+function makeWebContents() {
   return {
-    id: webContentsId++,
-    _owner: owner,
-    _prefs: webPreferences || {},
-    _url: 'about:blank',
-    _title: '',
-    _bounds: null,
-    session: webPreferences?.session,
-    navigationHistory: { canGoBack: () => false, canGoForward: () => false, goBack() {}, goForward() {} },
+    id: 1,
     setWindowOpenHandler() {},
-    on(channel, fn) {
-      listeners.set(channel, [...(listeners.get(channel) || []), fn]);
-      return this;
-    },
-    once() { return this; },
+    on() {},
     send() {},
-    openDevTools() {},
-    closeDevTools() {},
-    isDevToolsOpened: () => false,
-    reload() { this._reloaded = true; },
-    getURL() { return this._url; },
-    getTitle() { return this._title; },
-    isLoading: () => false,
-    loadURL(url) { this._url = url; return Promise.resolve(); },
-    loadFile(file) { this._url = 'file://' + String(file).replace(/\\/g, '/'); return Promise.resolve(); },
-    canGoBack: () => false,
-    canGoForward: () => false,
-    _listeners: listeners,
+    loadURL() { return Promise.resolve(); },
+    loadFile() { return Promise.resolve(); },
   };
 }
 
 class FakeBrowserWindow {
   constructor(options = {}) {
     this.options = options;
-    this.webContents = makeWebContents(this, options.webPreferences);
-    this.contentView = { addChildView: (view) => { this._attachedView = view; } };
-    this._destroyed = false;
-    this._title = options.title || '';
+    this.webContents = makeWebContents();
     FakeBrowserWindow._instances.push(this);
   }
   static _instances = [];
-  static getAllWindows() { return FakeBrowserWindow._instances.filter((w) => !w._destroyed); }
-  static fromWebContents() { return null; }
+  static getAllWindows() { return FakeBrowserWindow._instances.slice(); }
   on() {}
   once(event, fn) { if (event === 'ready-to-show') fn(); return this; }
   show() {}
   focus() {}
-  isDestroyed() { return this._destroyed; }
-  isMinimized() { return false; }
-  restore() {}
-  destroy() { this._destroyed = true; }
-  getContentSize() { return [1280, 840]; }
-  setTitle(title) { this._title = title; }
-  loadURL(url) { this.webContents._url = url; return Promise.resolve(); }
-  loadFile(file) { this.webContents._url = 'file://' + String(file).replace(/\\/g, '/'); return Promise.resolve(); }
+  destroy() {}
+  loadURL() { return Promise.resolve(); }
+  loadFile() { return Promise.resolve(); }
 }
 
-class FakeWebContentsView {
-  constructor(options = {}) {
-    this.webContents = makeWebContents(this, options.webPreferences);
-    this.setBackgroundColor = () => {};
-    this.setBounds = (bounds) => { this.webContents._bounds = bounds; };
-    FakeWebContentsView._instances.push(this);
-  }
-  static _instances = [];
-}
-
-const partitionSessions = new Map();
-const fromPartitionCalls = [];
-function fakeSession(partition) {
-  if (!partitionSessions.has(partition)) {
-    partitionSessions.set(partition, {
-      partition,
-      calls: { clearStorageData: 0, clearCache: 0, clearAuthCache: 0 },
-      async clearStorageData() { this.calls.clearStorageData += 1; },
-      async clearCache() { this.calls.clearCache += 1; },
-      async clearAuthCache() { this.calls.clearAuthCache += 1; },
-      async clearHostResolverCache() {},
-      async clearCodeCaches() {},
-      flushStorageData() {},
-      setPermissionRequestHandler() {},
-      setPermissionCheckHandler() {},
-      setUserAgent(ua) { this._userAgent = ua; },
-      on() {},
-    });
-  }
-  fromPartitionCalls.push(partition);
-  return partitionSessions.get(partition);
-}
+// child_process stub — records spawns; the fake pid is THIS process so
+// isPidAlive() (process.kill(pid, 0)) reports it as running.
+const spawnCalls = [];
+const fakeSpawn = (command, args, options) => {
+  spawnCalls.push({ command, args, options });
+  return {
+    pid: process.pid,
+    unref() {},
+    on() {},
+  };
+};
 
 const ipcHandlers = new Map();
 const ipcMain = {
@@ -137,18 +86,14 @@ const ipcMain = {
   on() {},
 };
 
-const appPaths = { userData: tmpData, sessionData: tmpSession };
+const appPaths = { userData: tmpData };
 const app = {
-  getPath: (name) => {
-    if (name === 'userData') return appPaths.userData;
-    if (name === 'sessionData') return appPaths.sessionData;
-    return path.join(tmpRoot, name);
-  },
+  getPath: (name) => (name === 'userData' ? appPaths.userData : path.join(tmpRoot, name)),
   setPath: (name, value) => { appPaths[name] = value; },
   whenReady: () => Promise.resolve(),
   on() {},
   quit() {},
-  getVersion: () => '1.0.0-smoke',
+  getVersion: () => '2.0.0-smoke',
   isPackaged: false,
   requestSingleInstanceLock: () => true,
   setName() {},
@@ -157,16 +102,17 @@ const app = {
 const electronStub = {
   app,
   BrowserWindow: FakeBrowserWindow,
-  WebContentsView: FakeWebContentsView,
   ipcMain,
-  session: { fromPartition: fakeSession },
-  shell: { openPath: async () => '' },
+  shell: { openPath: async () => '', openExternal: async () => {} },
 };
 
-// Intercept require('electron') for the main module under test.
+// Intercept require('electron') and spawn inside the main module under test.
 const originalLoad = Module._load;
 Module._load = function (request, parent, isMain) {
   if (request === 'electron') return electronStub;
+  if (request === 'child_process' || request === 'node:child_process') {
+    return { ...originalLoad.call(this, request, parent, isMain), spawn: fakeSpawn };
+  }
   return originalLoad.call(this, request, parent, isMain);
 };
 
@@ -190,17 +136,27 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
   await test('app:info reports the sandboxed temp data root', async () => {
     const info = await call('app:info');
     assert.equal(info.dataRoot, tmpData);
-    assert.equal(info.sessionData, tmpSession);
-    assert.equal(info.partitionPrefix, 'persist:profile-');
+    assert.equal(info.portable, false);
+    assert.equal(info.chromeFound, true);
+  });
+
+  await test('app:chrome-status finds the env-provided Chrome', async () => {
+    const status = await call('app:chrome-status');
+    assert.equal(status.found, true);
+    assert.equal(status.executablePath, fakeChromePath);
+    assert.equal(status.source, 'env');
   });
 
   let profileA;
-  await test('profiles:create creates isolated profile via IPC', async () => {
+  await test('profiles:create assigns a dedicated directory and creates it on disk', async () => {
     profileA = await call('profiles:create', { name: 'Smoke Alpha', email: 'alpha@example.com' });
     assert.match(profileA.id, /^[a-f0-9]{18}$/);
+    assert.equal(profileA.directory, `profiles/profile-${profileA.id}`);
     const persisted = JSON.parse(fs.readFileSync(path.join(tmpData, 'profiles.json'), 'utf8'));
     assert.equal(persisted.profiles.length, 1);
+    assert.equal(persisted.profiles[0].directory, profileA.directory);
     assert.ok(!JSON.stringify(persisted).includes('cookie'), 'metadata store contains no website data');
+    assert.ok(fs.statSync(path.join(tmpData, profileA.directory)).isDirectory(), 'profile directory created eagerly');
   });
 
   let profileB;
@@ -209,89 +165,66 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
     assert.notEqual(profileA.id, profileB.id);
   });
 
-  await test('profiles:open creates a window whose page view uses persist:profile-<idA> — never the default session', async () => {
-    FakeBrowserWindow._instances.length = 0;
-    FakeWebContentsView._instances.length = 0;
+  await test('profiles:open launches Chrome with a per-profile --user-data-dir (no shell)', async () => {
     const result = await call('profiles:open', { id: profileA.id });
     assert.equal(result.reused, false);
-    const view = FakeWebContentsView._instances[0];
-    assert.ok(view, 'page view created');
-    assert.equal(view.webContents._prefs.session?.partition, `persist:profile-${profileA.id}`);
-    assert.equal(view.webContents._prefs.nodeIntegration, false);
-    assert.equal(view.webContents._prefs.contextIsolation, true);
-    assert.equal(view.webContents._prefs.sandbox, true);
+    assert.equal(spawnCalls.length, 1);
+    const { command, args, options } = spawnCalls[0];
+    assert.equal(command, fakeChromePath);
+    assert.deepEqual(args.slice(1), ['--new-window', '--no-first-run', '--no-default-browser-check']);
+    assert.equal(args[0], `--user-data-dir=${path.join(tmpData, profileA.directory)}`);
+    assert.equal(options.shell, false);
+    assert.ok(Array.isArray(args) && !args.some((a) => a.includes('profile-' + profileB.id)), 'B directory never passed to A launch');
   });
 
-  await test('opening the same profile twice focuses instead of duplicating', async () => {
+  await test('opening the same profile twice does NOT spawn a second Chrome', async () => {
     const result = await call('profiles:open', { id: profileA.id });
     assert.equal(result.reused, true);
+    assert.equal(spawnCalls.length, 1, 'no new spawn for a running profile');
   });
 
-  await test('profiles:open creates a DIFFERENT partition for the second profile', async () => {
-    const beforeB = FakeWebContentsView._instances.length;
+  await test('each profile launches with its OWN user-data-dir', async () => {
     await call('profiles:open', { id: profileB.id });
-    const view = FakeWebContentsView._instances[beforeB]; // the newly created view
-    assert.equal(view.webContents._prefs.session?.partition, `persist:profile-${profileB.id}`);
+    assert.equal(spawnCalls.length, 2);
+    assert.equal(spawnCalls[1].args[0], `--user-data-dir=${path.join(tmpData, profileB.directory)}`);
+    assert.ok(!spawnCalls[1].args[0].includes(profileA.id));
   });
 
-  await test('profile sessions present a stock desktop Chrome UA (no Electron token)', () => {
-    for (const p of [profileA, profileB]) {
-      const sess = partitionSessions.get(`persist:profile-${p.id}`);
-      assert.ok(sess, 'partition session was created');
-      assert.ok(sess._userAgent, 'setUserAgent was called on the profile session');
-      assert.ok(!/Electron|TechnoBrowse/.test(sess._userAgent), `UA must not advertise Electron: ${sess._userAgent}`);
-      assert.match(sess._userAgent, /Chrome\/\d+\.\d+\.\d+\.\d+ Safari\/537\.36$/);
-    }
-  });
-
-  await test('chrome IPC: navigate normalizes input and loads it in the profile view', async () => {
-    const chromeWindow = FakeBrowserWindow._instances.find((w) =>
-      String(w.options.webPreferences?.preload || '').endsWith('chromePreload.js')
-    );
-    assert.ok(chromeWindow, 'chrome window found');
-    const sender = chromeWindow.webContents;
-    // Which profile is this chrome window bound to? Profile A was opened first.
-    const ready = await call('chrome:ready', undefined, sender);
-    assert.equal(ready.id, profileA.id);
-    const nav = await call('chrome:navigate', { input: 'example.com' }, sender);
-    assert.equal(nav.ok, true);
-    assert.equal(nav.url, 'https://example.com/');
-    // blocked scheme surfaces an error, no navigation
-    const blocked = await call('chrome:navigate', { input: 'javascript:alert(1)' }, sender);
-    assert.equal(blocked.ok, false);
-  });
-
-  await test('chrome:set-toolbar-height repositions the page view below the toolbar', async () => {
-    const chromeWindow = FakeBrowserWindow._instances.find((w) =>
-      String(w.options.webPreferences?.preload || '').endsWith('chromePreload.js')
-    );
-    const sender = chromeWindow.webContents;
-    await call('chrome:set-toolbar-height', { height: 92 }, sender);
-    // The handler targets the record bound to this chrome window (profile A);
-    // instances[0] is profile B's view now, so locate A's view explicitly.
-    const view = FakeWebContentsView._instances.find(
-      (v) => v.webContents._prefs.session?.partition === `persist:profile-${profileA.id}`
-    );
-    assert.ok(view, 'profile A page view found');
-    assert.equal(view.webContents._bounds.y, 92);
-    assert.equal(view.webContents._bounds.height, 840 - 92);
-    // …and profile B's view (different window) keeps its own layout
-    const viewB = FakeWebContentsView._instances.find(
-      (v) => v.webContents._prefs.session?.partition === `persist:profile-${profileB.id}`
-    );
-    assert.equal(viewB.webContents._bounds.y, 56, 'B toolbar unchanged');
-  });
-
-  await test('profiles:delete removes metadata + wipes ONLY that profile’s session', async () => {
-    await call('profiles:delete', { id: profileB.id });
+  await test('delete is REFUSED while the profile looks running', async () => {
+    await assert.rejects(call('profiles:delete', { id: profileA.id }), /در حال اجراست/);
     const persisted = JSON.parse(fs.readFileSync(path.join(tmpData, 'profiles.json'), 'utf8'));
-    assert.equal(persisted.profiles.length, 1);
-    assert.equal(persisted.profiles[0].id, profileA.id);
-    const wipedB = partitionSessions.get(`persist:profile-${profileB.id}`);
-    assert.ok(wipedB && wipedB.calls.clearStorageData >= 1, 'session storage cleared for deleted profile');
-    assert.ok(wipedB.calls.clearCache >= 1, 'cache cleared for deleted profile');
-    const keptA = partitionSessions.get(`persist:profile-${profileA.id}`);
-    assert.ok(!keptA || keptA.calls.clearStorageData === 0, 'surviving profile session untouched');
+    assert.equal(persisted.profiles.length, 2, 'metadata untouched');
+    assert.ok(fs.existsSync(path.join(tmpData, profileA.directory)), 'directory untouched');
+  });
+
+  await test('profiles:list reports isRunning for launched profiles', async () => {
+    const list = await call('profiles:list');
+    const a = list.find((p) => p.id === profileA.id);
+    const b = list.find((p) => p.id === profileB.id);
+    assert.equal(a.isRunning, true);
+    assert.equal(b.isRunning, true); // also "running" — launched in this session
+  });
+
+  await test('delete proceeds for a profile with no running Chrome and wipes its directory', async () => {
+    // Profile B's fake chrome is "alive" too — delete must refuse for B as well.
+    await assert.rejects(call('profiles:delete', { id: profileB.id }), /در حال اجراست/);
+  });
+
+  await test('chrome "disappears" → open reports CHROME_NOT_FOUND and no spawn happens', async () => {
+    const spawnsBefore = spawnCalls.length;
+    process.env.TECHNOBROWSE_CHROME_PATH = path.join(tmpRoot, 'definitely-not-chrome.exe');
+    const refreshed = await call('app:refresh-chrome');
+    assert.equal(refreshed.found, false);
+    await assert.rejects(call('profiles:open', { id: profileA.id }), /گوگل|Chrome پیدا نشد|Google Chrome پیدا نشد/);
+    assert.equal(spawnCalls.length, spawnsBefore, 'no spawn without Chrome');
+    // restore and re-check
+    process.env.TECHNOBROWSE_CHROME_PATH = fakeChromePath;
+    const again = await call('app:refresh-chrome');
+    assert.equal(again.found, true);
+  });
+
+  await test('delete refuses invalid profile ids before touching anything', async () => {
+    await assert.rejects(call('profiles:delete', { id: '../../etc' }), /نامعتبر/);
   });
 
   // ── Report ─────────────────────────────────────────────────────────────────

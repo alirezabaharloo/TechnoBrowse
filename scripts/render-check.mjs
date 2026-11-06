@@ -19,10 +19,6 @@ try {
   if (!appHtml.includes('TechnoBrowse')) throw new Error('رندر داشبورد فاقد محتوای برند است');
   console.log(`PASS  داشبورد <App/> رندر شد (${appHtml.length} بایت)`);
 
-  const { default: BrowserChrome } = await server.ssrLoadModule('/src/browser/BrowserChrome.jsx');
-  const chromeHtml = renderToString(React.createElement(BrowserChrome));
-  if (!chromeHtml.includes('نوار نشانی')) throw new Error('رندر نوار ابزار فاقد نوار نشانی است');
-  console.log(`PASS  <BrowserChrome/> رندر شد (${chromeHtml.length} بایت)`);
 
   process.exitCode = 0;
 } catch (error) {

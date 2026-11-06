@@ -1,7 +1,7 @@
 {
   "name": "technobrowse",
   "productName": "TechnoBrowse",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "TechnoBrowse — a lightweight multi-profile desktop browser. Every profile is a completely isolated, persistent browser environment.",
   "author": "TechnoBrowse",
   "license": "MIT",
@@ -15,9 +15,8 @@
     "smoke": "node scripts/smoke-main.cjs",
     "render-check": "node scripts/render-check.mjs",
     "dom-check": "node scripts/dom-check.mjs",
-    "dom-check:chrome": "node scripts/dom-check-chrome.mjs",
     "visual-check": "node scripts/visual-check.mjs",
-    "check": "npm run test && npm run smoke && npm run render-check && npm run dom-check && npm run dom-check:chrome && npm run build",
+    "check": "npm run test && npm run smoke && npm run render-check && npm run dom-check && npm run build",
     "dist": "npm run build && electron-builder --win portable",
     "dist:dir": "npm run build && electron-builder --win dir"
   },

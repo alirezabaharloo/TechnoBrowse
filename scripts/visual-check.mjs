@@ -1,6 +1,6 @@
 /**
- * Visual check: screenshots the built dashboard + browser chrome (preview/demo mode)
- * and the built-in start page using a self-contained Chromium.
+ * Visual check: screenshots the built dashboard (preview/demo mode)
+ * using a self-contained Chromium.
  * Usage: node scripts/visual-check.mjs <baseUrl>
  */
 import sparticuz, { inflate, setupLambdaEnvironment } from '@sparticuz/chromium';
@@ -61,18 +61,6 @@ await deleteButtons.first().click();
 await page.waitForTimeout(300);
 await shot(page, 'delete-dialog');
 await page.keyboard.press('Escape');
-
-// ── 2. Browser chrome (preview mode) ─────────────────────────────────────────
-const chromePage = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-await chromePage.goto(`${base}/browser.html`, { waitUntil: 'networkidle' });
-await chromePage.waitForTimeout(500);
-await shot(chromePage, 'browser-chrome');
-
-// ── 3. Built-in start page ───────────────────────────────────────────────────
-const startPage = await browser.newPage({ viewport: { width: 1200, height: 800 } });
-await startPage.goto(`${base}/start.html`, { waitUntil: 'networkidle' });
-await startPage.waitForTimeout(400);
-await shot(startPage, 'start-page');
 
 await browser.close();
 console.log('done:', results.join(', '));
