@@ -20,6 +20,8 @@ jobs:
       - run: npm test
       - run: npm run smoke
       - run: npm run render-check
+      - run: npm run dom-check
+      - run: npm run dom-check:chrome
       - run: npm run build
 
   portable:

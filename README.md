@@ -38,6 +38,9 @@ npm start       # vite build + electron .
 | `npm test` | Unit tests (profile store, URL normalization) — plain node |
 | `npm run smoke` | Integration smoke test of the Electron main process with a stubbed `electron` module — verifies per-profile partitions, IPC, deletion wiping |
 | `npm run render-check` | Server-renders both React entries to catch render-time crashes |
+| `npm run dom-check` | Drives the dashboard UI with jsdom — create/validate/delete flow end-to-end |
+| `npm run dom-check:chrome` | Drives the toolbar UI with a mocked Electron bridge — navigation, buttons, loading state |
+| `npm run check` | Runs every check above plus a production build |
 | `npm run dist` | **Build the Windows x64 portable executable** into `release/` |
 | `npm run dist:dir` | Build an unpacked Windows app directory (faster, for debugging) |
 
@@ -141,7 +144,9 @@ TechnoBrowse/
 │   ├── dev.mjs                ← Vite + Electron dev launcher
 │   ├── test-store.mjs         ← unit tests (profileStore + urlUtils)
 │   ├── smoke-main.cjs         ← main-process integration tests with a stubbed electron module
-│   └── render-check.mjs       ← SSR render smoke check for both React entries
+│   ├── render-check.mjs       ← SSR render smoke check for both React entries
+│   ├── dom-check.mjs          ← jsdom end-to-end flow for the dashboard (create/edit/delete)
+│   └── dom-check-chrome.mjs   ← jsdom toolbar flow with a mocked Electron bridge
 ├── build/icon.png             ← app icon (1024×1024)
 ├── electron-builder.yml       ← Windows x64 portable target
 └── .github/workflows/windows-portable.yml
@@ -178,6 +183,8 @@ TechnoBrowse/
 | `npm test` — profile store, URL utils | ✅ 17/17 |
 | `npm run smoke` — main-process IPC/partitions/deletion | ✅ 9/9 |
 | `npm run render-check` — both React entries render | ✅ 2/2 |
+| `npm run dom-check` — dashboard create/edit/delete flow | ✅ 9/9 |
+| `npm run dom-check:chrome` — toolbar navigation flow | ✅ 9/9 |
 | `electron-builder --linux dir` in this sandbox | ❌ blocked — the Electron binary host (GitHub release assets) is unreachable from here |
 | Live GUI run / portable `.exe` build | ⚠️ must be run once on a normal network — `npm install && npm run dist` |
 | Manual Tests 1–5 (isolation, persistence, restart, deletion) | ⚠️ run on Windows before release |
