@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; form-action https://www.google.com; base-uri 'none'" />
+<title>New Tab</title>
+<style>
+  :root {
+    --bg: #0b1220;
+    --panel: rgba(17, 26, 46, 0.72);
+    --panel-border: rgba(94, 163, 255, 0.14);
+    --text: #e6edf7;
+    --muted: #8aa0c2;
+    --accent: #3b82f6;
+    --accent-2: #5ea3ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background:
+      radial-gradient(900px 520px at 50% -10%, rgba(59, 130, 246, 0.22), transparent 60%),
+      radial-gradient(700px 500px at 85% 110%, rgba(94, 163, 255, 0.10), transparent 60%),
+      radial-gradient(600px 420px at 8% 105%, rgba(37, 99, 235, 0.10), transparent 55%),
+      var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    min-height: 100vh;
+    user-select: none;
+  }
+  .clock { font-size: 64px; font-weight: 650; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; line-height: 1; }
+  .date { margin-top: 8px; color: var(--muted); font-size: 14px; letter-spacing: 0.04em; }
+  .brand { margin-top: 26px; display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; }
+  .brand .dot { width: 8px; height: 8px; border-radius: 9999px; background: linear-gradient(135deg, var(--accent-2), var(--accent)); box-shadow: 0 0 12px rgba(59,130,246,.8); }
+
+  form.search { margin-top: 26px; width: min(620px, 92vw); }
+  .search-shell {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    padding: 4px 8px 4px 18px;
+    backdrop-filter: blur(12px);
+    transition: border-color .18s ease, box-shadow .18s ease;
+  }
+  .search-shell:focus-within {
+    border-color: rgba(94, 163, 255, 0.45);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18), 0 18px 50px rgba(2, 6, 23, 0.5);
+  }
+  .search-shell svg { color: var(--muted); flex: 0 0 auto; }
+  .search-shell input {
+    flex: 1; background: transparent; border: 0; outline: none;
+    color: var(--text); font-size: 17px; height: 46px; font-family: inherit;
+  }
+  .search-shell input::placeholder { color: #5c7299; }
+  .go {
+    border: 0; cursor: pointer; border-radius: 12px; height: 40px; padding: 0 18px;
+    color: #fff; font-weight: 600; font-size: 14px;
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4);
+    transition: transform .15s ease, filter .15s ease;
+  }
+  .go:hover { transform: translateY(-1px); filter: brightness(1.08); }
+  .go:active { transform: translateY(0); }
+
+  .tiles { margin-top: 34px; display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; max-width: 720px; }
+  .tile {
+    width: 118px; height: 108px; border-radius: 16px; text-decoration: none;
+    background: var(--panel); border: 1px solid var(--panel-border);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+    backdrop-filter: blur(10px);
+  }
+  .tile:hover { transform: translateY(-3px); border-color: rgba(94,163,255,.4); box-shadow: 0 14px 34px rgba(2,6,23,.55); }
+  .tile .glyph {
+    width: 40px; height: 40px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 17px; color: #0b1220;
+  }
+  .tile .label { color: var(--text); font-size: 12.5px; font-weight: 550; }
+  .hint { margin-top: 30px; color: #5c7299; font-size: 12px; }
+</style>
+</head>
+<body>
+  <div class="clock" id="clock">--:--</div>
+  <div class="date" id="date">Loading…</div>
+  <div class="brand"><span class="dot"></span> TechnoBrowse</div>
+
+  <form class="search" action="https://www.google.com/search" method="GET">
+    <div class="search-shell">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="q" name="q" type="text" placeholder="Search Google or type a URL in the address bar…" autocomplete="off" spellcheck="false" autofocus />
+      <button class="go" type="submit">Search</button>
+    </div>
+  </form>
+
+  <div class="tiles" id="tiles"></div>
+  <div class="hint">Each profile keeps its own cookies, logins and storage — switch profiles without mixing accounts.</div>
+
+<script>
+  var TILES = [
+    { label: 'Google',   url: 'https://www.google.com',   glyph: 'G', bg: 'linear-gradient(135deg,#fde68a,#fbbf24)' },
+    { label: 'Gmail',    url: 'https://mail.google.com',  glyph: 'M', bg: 'linear-gradient(135deg,#fda4af,#fb7185)' },
+    { label: 'ChatGPT',  url: 'https://chatgpt.com',      glyph: 'C', bg: 'linear-gradient(135deg,#a7f3d0,#34d399)' },
+    { label: 'Gemini',   url: 'https://gemini.google.com',glyph: 'G', bg: 'linear-gradient(135deg,#c4b5fd,#8b5cf6)' },
+    { label: 'Claude',   url: 'https://claude.ai',        glyph: 'C', bg: 'linear-gradient(135deg,#fed7aa,#fb923c)' },
+    { label: 'YouTube',  url: 'https://www.youtube.com',  glyph: 'Y', bg: 'linear-gradient(135deg,#fecaca,#ef4444)' },
+    { label: 'GitHub',   url: 'https://github.com',       glyph: 'G', bg: 'linear-gradient(135deg,#cbd5e1,#64748b)' },
+    { label: 'Wikipedia',url: 'https://www.wikipedia.org',glyph: 'W', bg: 'linear-gradient(135deg,#e2e8f0,#94a3b8)' }
+  ];
+  var tiles = document.getElementById('tiles');
+  TILES.forEach(function (t) {
+    var a = document.createElement('a');
+    a.className = 'tile';
+    a.href = t.url;
+    a.innerHTML = '<span class="glyph" style="background:' + t.bg + '">' + t.glyph + '</span><span class="label">' + t.label + '</span>';
+    tiles.appendChild(a);
+  });
+
+  var clockEl = document.getElementById('clock');
+  var dateEl = document.getElementById('date');
+  function tick() {
+    var now = new Date();
+    clockEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    dateEl.textContent = now.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  }
+  tick();
+  setInterval(tick, 1000 * 20);
+</script>
+</body>
+</html>
