@@ -90,6 +90,7 @@ The executable is unsigned (code-signing certificates are intentionally out of s
 
 - Each profile's `WebContentsView` (the invisible page container) is created with `webPreferences.session = session.fromPartition('persist:profile-<id>')` — never the default session, never another profile's session.
 - OAuth popups (`window.open`) are re-created as bare `BrowserWindow`s **in the same profile partition**, so Google/Microsoft sign-in flows work and their cookies land in the right profile.
+- Profile sessions present a **stock desktop Chrome user-agent** (the exact Chromium version Electron ships) so bot-sensitive sites like Google sign-in render their normal login flow instead of an ‘unsupported browser’ page. Downloads behave like Chrome too (save dialog + collision-free filenames).
 - Closing a profile window never clears anything. Data is removed **only** when you explicitly delete a profile: the app then closes that profile's windows, removes its metadata, calls `session.clearStorageData()/clearCache()/clearAuthCache()`, and deletes the `Partitions/profile-<id>` directory. Other profiles are untouched.
 - `profiles.json` contains **only** metadata: `id`, `name`, optional `email` label, avatar color, timestamps. No cookies, tokens, or passwords — ever.
 
