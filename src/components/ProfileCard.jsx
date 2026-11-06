@@ -27,7 +27,7 @@ export default function ProfileCard({ profile, onOpen, onEdit, onDelete, opening
   };
 
   return (
-    <article className="profile-card group relative flex flex-col rounded-2xl border border-white/[0.08] bg-ink-800 p-5 shadow-card">
+    <article className="profile-card group relative flex flex-col rounded-2xl border border-tint-line bg-ink-800 p-5 shadow-card">
       {/* سربرگ: آواتار + هویت */}
       <div className="flex items-start gap-4">
         <div
@@ -71,18 +71,18 @@ export default function ProfileCard({ profile, onOpen, onEdit, onDelete, opening
       <div className="mt-3 flex items-center gap-1.5">
         <code
           dir="ltr"
-          className="truncate rounded-md border border-white/[0.07] bg-ink-850 px-2 py-1 text-left font-mono text-[10.5px] text-accent-400"
+          className="truncate rounded-md border border-tint-line bg-ink-850 px-2 py-1 text-left font-mono text-[10.5px] text-accent-400"
           title="پارتیشن ذخیره‌سازی کرومیوم این پروفایل"
         >
           persist:profile-{profile.id}
         </code>
         <button
           onClick={copyPartition}
-          className="rounded-md p-1.5 text-slate-500 opacity-0 transition hover:bg-ink-800/5 hover:text-slate-200 focus:opacity-100 group-hover:opacity-100"
+          className="rounded-md p-1.5 text-slate-500 opacity-0 transition hover:bg-tint-fill hover:text-slate-200 focus:opacity-100 group-hover:opacity-100"
           title="کپی نام پارتیشن"
           aria-label="کپی نام پارتیشن"
         >
-          {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+          {copied ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
         </button>
       </div>
 
@@ -111,8 +111,8 @@ export default function ProfileCard({ profile, onOpen, onEdit, onDelete, opening
         </button>
         <button
           onClick={() => onEdit(profile)}
-          className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-ink-850 text-slate-400
-            transition hover:border-white/15 hover:bg-ink-800/5 hover:text-slate-100 active:scale-95"
+          className="flex h-10 w-10 items-center justify-center rounded-xl border border-tint-line bg-ink-850 text-slate-400
+            transition hover:border-tint-line-strong hover:bg-tint-fill hover:text-slate-100 active:scale-95"
           title="ویرایش پروفایل"
           aria-label={`ویرایش ${profile.name}`}
         >
@@ -120,8 +120,8 @@ export default function ProfileCard({ profile, onOpen, onEdit, onDelete, opening
         </button>
         <button
           onClick={() => onDelete(profile)}
-          className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-ink-850 text-slate-400
-            transition hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-400 active:scale-95"
+          className="flex h-10 w-10 items-center justify-center rounded-xl border border-tint-line bg-ink-850 text-slate-400
+            transition hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-500 active:scale-95"
           title="حذف پروفایل"
           aria-label={`حذف ${profile.name}`}
         >

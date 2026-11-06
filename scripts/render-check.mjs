@@ -16,7 +16,7 @@ const server = await createServer({
 try {
   const { default: App } = await server.ssrLoadModule('/src/App.jsx');
   const appHtml = renderToString(React.createElement(App));
-  if (!appHtml.includes('تکنو')) throw new Error('رندر داشبورد فاقد محتوای برند است');
+  if (!appHtml.includes('TechnoBrowse')) throw new Error('رندر داشبورد فاقد محتوای برند است');
   console.log(`PASS  داشبورد <App/> رندر شد (${appHtml.length} بایت)`);
 
   const { default: BrowserChrome } = await server.ssrLoadModule('/src/browser/BrowserChrome.jsx');

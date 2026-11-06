@@ -14,6 +14,7 @@ import {
   X,
 } from 'lucide-react';
 import { AVATAR_STYLES, chromeBridge, initialsFor } from '../lib/profileUtils';
+import ThemeToggle from '../components/ThemeToggle';
 
 const EMPTY_PAGE = {
   url: '',
@@ -153,18 +154,18 @@ export default function BrowserChrome() {
   }, [page.displayUrl]);
 
   const iconButton =
-    'flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/5 hover:text-slate-100 active:scale-95 disabled:pointer-events-none disabled:opacity-30';
+    'flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-tint-fill hover:text-slate-100 active:scale-95 disabled:pointer-events-none disabled:opacity-30';
 
   return (
     <div className="flex h-screen select-none flex-col overflow-hidden bg-ink-900 text-slate-200">
       {/* ══ نوار ابزار (ارتفاعش توسط پردازش اصلی خوانده می‌شود) ══ */}
-      <div ref={toolbarRef} className="relative shrink-0 border-b border-white/10 bg-gradient-to-b from-ink-850 to-ink-900 shadow-[0_1px_0_rgba(255,255,255,0.05)_inset]">
+      <div ref={toolbarRef} className="relative shrink-0 border-b border-tint-line bg-gradient-to-b from-ink-850 to-ink-900 shadow-[0_1px_0_rgba(255,255,255,0.05)_inset]">
         {/* ردیف ناوبری */}
         <div className="relative flex h-14 items-center gap-1 px-2">
           {/* چیپ ایزولهٔ پروفایل */}
           {profile && (
             <div
-              className="me-1 hidden h-9 max-w-[160px] select-none items-center gap-2 rounded-lg border border-accent-400/20 bg-accent-400/[0.08] px-2 sm:flex"
+              className="me-1 hidden h-9 max-w-[160px] select-none items-center gap-2 rounded-lg border border-[rgba(61,139,255,0.2)] bg-[rgba(61,139,255,0.08)] px-2 sm:flex"
               title={`نشست ایزوله · persist:profile-${profile.id}\nکوکی‌ها، حافظه و کش این پروفایل خصوصی است.`}
             >
               <span
@@ -193,14 +194,14 @@ export default function BrowserChrome() {
               <RotateCw size={16} strokeWidth={2.2} />
             )}
           </button>
-          <button onClick={goHome} className={iconButton} title="صفحهٔ شروع تکنوبروز" aria-label="خانه">
+          <button onClick={goHome} className={iconButton} title="صفحهٔ شروع TechnoBrowse" aria-label="خانه">
             <Home size={16} strokeWidth={2.2} />
           </button>
 
           {/* نوار نشانی (نشانی همیشه چپ‌چین) */}
           <div
-            className="mx-1 flex h-9 min-w-0 flex-1 items-center gap-2 rounded-full border border-white/10 bg-ink-800 px-3.5 shadow-sm transition
-              focus-within:border-accent-400/50 focus-within:shadow-[0_0_0_3px_rgba(37,99,235,0.15)]"
+            className="mx-1 flex h-9 min-w-0 flex-1 items-center gap-2 rounded-full border border-tint-line bg-ink-800 px-3.5 shadow-sm transition
+              focus-within:border-[rgba(61,139,255,0.5)] focus-within:shadow-[0_0_0_3px_rgba(37,99,235,0.15)]"
           >
             <SchemeIcon size={13} className="shrink-0 text-slate-500" aria-hidden="true" />
             <input
@@ -246,6 +247,9 @@ export default function BrowserChrome() {
             )}
           </div>
 
+          {/* تغییر تم تیره/روشن */}
+          <ThemeToggle className="h-9 w-9 rounded-lg" />
+
           {/* ابزارهای توسعه‌دهنده */}
           <button onClick={toggleDevTools} className={iconButton} title="ابزارهای توسعه‌دهنده (F12)" aria-label="ابزارهای توسعه‌دهنده">
             <Code2 size={17} strokeWidth={2} />
@@ -269,7 +273,7 @@ export default function BrowserChrome() {
                 setCrashed(false);
                 reload();
               }}
-              className="shrink-0 rounded-md border border-white/50 px-2.5 py-1 text-[11px] font-semibold transition hover:bg-ink-800/15"
+              className="shrink-0 rounded-md border border-tint-line-strong px-2.5 py-1 text-[11px] font-semibold transition hover:bg-tint-fill-2"
             >
               بارگذاری دوباره
             </button>
@@ -278,10 +282,10 @@ export default function BrowserChrome() {
 
         {/* اعلان موقت خطا (داخل ناحیهٔ اندازه‌گیری‌شده تا صفحه رویش نیاید) */}
         {toast && (
-          <div className="flex h-9 items-center justify-center gap-2 border-t border-white/5 bg-amber-400/10 px-3 text-[11.5px] text-amber-200">
-            <TriangleAlert size={13} className="shrink-0 text-amber-500" />
+          <div className="flex h-9 items-center justify-center gap-2 border-t border-tint-line bg-amber-400/10 px-3 text-[11.5px] text-amber-600">
+            <TriangleAlert size={13} className="shrink-0 text-amber-600" />
             <span className="truncate">{toast.message}</span>
-            <button onClick={() => setToast(null)} className="shrink-0 rounded p-0.5 text-amber-500 transition hover:text-amber-200" aria-label="بستن اعلان">
+            <button onClick={() => setToast(null)} className="shrink-0 rounded p-0.5 text-amber-600 transition hover:text-amber-600" aria-label="بستن اعلان">
               <X size={13} />
             </button>
           </div>
@@ -289,8 +293,8 @@ export default function BrowserChrome() {
 
         {/* اعلان حالت پیش‌نمایش (فقط خارج از اپلیکیشن دسکتاپ) */}
         {!api && (
-          <div className="flex h-9 items-center justify-center border-t border-amber-400/30 bg-amber-400/10 px-3 text-[11px] font-medium text-amber-200">
-            حالت پیش‌نمایش — نوار ابزار فقط داخل اپلیکیشن دسکتاپ تکنوبروز به پروفایل واقعی متصل می‌شود.
+          <div className="flex h-9 items-center justify-center border-t border-amber-400/30 bg-amber-400/10 px-3 text-[11px] font-medium text-amber-600">
+            حالت پیش‌نمایش — نوار ابزار فقط داخل اپلیکیشن دسکتاپ TechnoBrowse به پروفایل واقعی متصل می‌شود.
           </div>
         )}
       </div>

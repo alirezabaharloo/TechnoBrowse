@@ -5,34 +5,46 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Dark navy surface scale ("ink-*") — matches the TechnoWin logo: blue is the
-        // primary accent, white is the secondary (text/icon) color.
+        // The whole palette is variable-driven so [data-theme="light"] on <html>
+        // flips the app between dark and light without touching component classes.
         ink: {
-          950: '#05070d',
-          900: '#0b1220', // page background
-          850: '#0e1626', // inset surfaces / input fills
-          800: '#141d33', // cards / panels
-          750: '#1a2440', // subtle fills & hover
-          700: '#232f52', // strong borders
+          950: 'var(--ink-950)',
+          900: 'var(--ink-900)', // page background
+          850: 'var(--ink-850)', // inset surfaces / input fills
+          800: 'var(--ink-800)', // cards / panels
+          750: 'var(--ink-750)', // subtle fills & hover
+          700: 'var(--ink-700)', // strong borders
+        },
+        // Legacy slate scale remapped to variables: components written for the
+        // dark theme (slate-100 = light text…) flip to dark-on-light automatically.
+        slate: {
+          100: 'var(--slate-100)',
+          200: 'var(--slate-200)',
+          300: 'var(--slate-300)',
+          400: 'var(--slate-400)',
+          500: 'var(--slate-500)',
+          600: 'var(--slate-600)',
+          700: 'var(--slate-700)',
         },
         accent: {
-          400: '#3d8bff',
+          400: 'var(--accent-400)', // flips: #3d8bff on dark, #2563eb on light
           500: '#2563eb',
           600: '#1d4ed8',
         },
+        tint: {
+          line: 'var(--tint-line)', // hairline borders
+          lineStrong: 'var(--tint-line-strong)',
+          fill: 'var(--tint-fill)', // subtle fills / hovers
+          fill2: 'var(--tint-fill-2)',
+          scrim: 'var(--scrim)', // modal backdrop
+        },
       },
       fontFamily: {
-        sans: [
-          'Sahel',
-          'Segoe UI',
-          'Tahoma',
-          'system-ui',
-          'sans-serif',
-        ],
+        sans: ['Sahel', 'Segoe UI', 'Tahoma', 'system-ui', 'sans-serif'],
         mono: ['Cascadia Mono', 'Consolas', 'monospace'],
       },
       boxShadow: {
-        card: '0 18px 44px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.35)',
+        card: '0 18px 44px var(--shadow-card), 0 2px 6px var(--shadow-card-2)',
         glow: '0 0 0 1px rgba(61, 139, 255, 0.35), 0 10px 36px rgba(37, 99, 235, 0.35)',
       },
       keyframes: {

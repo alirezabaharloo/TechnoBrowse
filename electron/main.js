@@ -107,7 +107,7 @@ function createDashboardWindow() {
     minHeight: 640,
     show: false,
     backgroundColor: '#0b1220',
-    title: 'تکنوبروز',
+    title: 'TechnoBrowse',
     autoHideMenuBar: true,
     ...(APP_ICON ? { icon: APP_ICON } : {}),
     webPreferences: baseWebPreferences(path.join(__dirname, 'preload.js')),
@@ -140,7 +140,7 @@ function createProfileWindow(profile) {
     minHeight: 600,
     show: false,
     backgroundColor: '#0b1220',
-    title: `${profile.name} · تکنوبروز`,
+    title: `${profile.name} · TechnoBrowse`,
     autoHideMenuBar: true,
     ...(APP_ICON ? { icon: APP_ICON } : {}),
     webPreferences: baseWebPreferences(path.join(__dirname, 'chromePreload.js')),
@@ -223,7 +223,7 @@ function createProfilePopup(profile, { url, features }) {
     ...(popupFeatures.y !== undefined ? { y: popupFeatures.y } : {}),
     minWidth: 320,
     minHeight: 240,
-    title: 'تکنوبروز',
+    title: 'TechnoBrowse',
     autoHideMenuBar: true,
     backgroundColor: '#0b1220',
     ...(APP_ICON ? { icon: APP_ICON } : {}),
@@ -423,7 +423,7 @@ function sendChromeState(record) {
       canGoForward,
     });
     const pageTitle = contents.getTitle();
-    record.win.setTitle(pageTitle ? `${pageTitle} · ${record.profile.name} — تکنوبروز` : `${record.profile.name} — تکنوبروز`);
+    record.win.setTitle(pageTitle ? `${pageTitle} · ${record.profile.name} — TechnoBrowse` : `${record.profile.name} — TechnoBrowse`);
   } catch {
     /* window mid-teardown */
   }
