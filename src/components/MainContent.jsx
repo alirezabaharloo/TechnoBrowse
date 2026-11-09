@@ -22,6 +22,7 @@ export default function MainContent({
   setModal,
   openingId,
   handleOpen,
+  handleToggleAiLimit,
   EmptyState,
 }) {
   return (
@@ -106,6 +107,7 @@ export default function MainContent({
                 onOpen={handleOpen}
                 onEdit={(p) => setModal({ type: 'edit', profile: p })}
                 onDelete={(p) => setModal({ type: 'delete', profile: p })}
+                onToggleAiLimit={handleToggleAiLimit}
                 chromeAvailable={chromeStatus ? chromeStatus.found !== false : true}
               />
             ))}

@@ -6,6 +6,14 @@ import MainContent from './components/MainContent';
 import Footer from './components/Footer';
 import ModalLayer from './components/ModalLayer';
 
+const HOUR = 3600000;
+const DAY = 86400000;
+const DEMO_PROFILES = [
+  { id: 'demo8f3a1b2c4d5e', name: 'حساب کاری', email: 'alex@work.com', color: 'blue', createdAt: new Date(Date.now() - 40 * DAY).toISOString(), lastOpenedAt: new Date(Date.now() - 5 * HOUR).toISOString(), directory: 'profiles/profile-demo8f3a1b2c4d5e', isRunning: false, aiLimitReachedAt: null },
+  { id: 'demo1c2d3e4f5a6b', name: 'شخصی', email: 'alex.personal@gmail.com', color: 'emerald', createdAt: new Date(Date.now() - 21 * DAY).toISOString(), lastOpenedAt: new Date(Date.now() - 2 * DAY).toISOString(), directory: 'profiles/profile-demo1c2d3e4f5a6b', isRunning: false, aiLimitReachedAt: Date.now() - (3 * HOUR + 25 * 60000) },
+  { id: 'demo9a8b7c6d5e4f', name: 'پروژهٔ مشتری', email: '', color: 'amber', createdAt: new Date(Date.now() - 6 * DAY).toISOString(), lastOpenedAt: null, directory: 'profiles/profile-demo9a8b7c6d5e4f', isRunning: false, aiLimitReachedAt: null },
+];
+
 export default function App() {
   const api = useMemo(() => nativeBridge(), []);
   const demoMode = !api;
@@ -47,6 +55,7 @@ export default function App() {
           setInfo(appInfo);
           setChromeStatus(chrome);
         } else {
+          setProfiles(DEMO_PROFILES);
           setChromeStatus({ found: true, source: 'demo' });
         }
       } catch (error) {
@@ -68,12 +77,16 @@ export default function App() {
 
   const handleCreate = async ({ name, email }) => {
     if (demoMode) {
+      const id = `demo${Math.random().toString(16).slice(2, 16)}`;
       const demo = {
-        id: `demo${Math.random().toString(16).slice(2, 16)}`,
+        id,
         name, email,
         color: 'violet',
         createdAt: new Date().toISOString(),
         lastOpenedAt: null,
+        directory: `profiles/profile-${id}`,
+        isRunning: false,
+        aiLimitReachedAt: null,
       };
       setProfiles((list) => [demo, ...list]);
       pushToast(`پروفایل «${name}» ایجاد شد (حالت پیش‌نمایش).`);
@@ -109,6 +122,29 @@ export default function App() {
       pushToast(`پروفایل «${target.name}» و تمام داده‌هایش حذف شد.`);
     } catch (error) {
       pushToast(error?.message || 'حذف پروفایل ممکن نشد.', 'error');
+    }
+  };
+
+  const handleToggleAiLimit = async (profile, enabled) => {
+    if (demoMode) {
+      setProfiles((list) =>
+        list.map((p) => (p.id === profile.id ? { ...p, aiLimitReachedAt: enabled ? Date.now() : null } : p))
+      );
+      pushToast(
+        enabled ? `سقف AI برای «${profile.name}» ثبت شد.` : `وضعیت سقف AI برای «${profile.name}» برداشته شد.`,
+        'info'
+      );
+      return;
+    }
+    try {
+      await api.setProfileAiLimit(profile.id, enabled);
+      await refresh();
+      pushToast(
+        enabled ? `سقف AI برای «${profile.name}» ثبت شد.` : `وضعیت سقف AI برای «${profile.name}» برداشته شد.`,
+        'success'
+      );
+    } catch (error) {
+      pushToast(error?.message || 'ذخیرهٔ وضعیت سقف AI ممکن نشد.', 'error');
     }
   };
 
@@ -184,6 +220,7 @@ export default function App() {
         setModal={setModal}
         openingId={openingId}
         handleOpen={handleOpen}
+        handleToggleAiLimit={handleToggleAiLimit}
         EmptyState={EmptyState}
       />
 

@@ -293,6 +293,17 @@ function registerDashboardIpc() {
     return { ok: true };
   });
 
+  ipcMain.handle('profiles:set-ai-limit', async (_event, payload) => {
+    const id = String(payload?.id ?? '');
+    if (!/^[a-z0-9-]{4,64}$/i.test(id)) throw new Error('شناسهٔ پروفایل نامعتبر است.');
+    // The main process owns the clock — the timestamp is exactly "now",
+    // never a renderer-supplied value.
+    const reachedAt = payload?.enabled === true ? Date.now() : null;
+    const updated = await store.setAiLimit(id, reachedAt);
+    broadcastProfilesChanged();
+    return updated;
+  });
+
   ipcMain.handle('profiles:open', async (_event, payload) => {
     const id = String(payload?.id ?? '');
     if (!/^[a-z0-9-]{4,64}$/i.test(id)) throw new Error('شناسهٔ پروفایل نامعتبر است.');

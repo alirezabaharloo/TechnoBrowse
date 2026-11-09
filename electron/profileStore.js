@@ -22,6 +22,17 @@ const MAX_EMAIL_LENGTH = 120;
 // Directory layout: <dataRoot>/profiles/profile-<id>/ (Chrome user-data-dir).
 const PROFILE_DIR_RE = /^profiles\/profile-[a-z0-9-]{4,64}$/i;
 
+// Tolerated skew between the stored timestamp and "now" (clock adjustments).
+const AI_LIMIT_FUTURE_SKEW_MS = 5 * 60 * 1000;
+
+/** Keep only finite, positive, sane epoch-ms timestamps; anything else → null. */
+function sanitizeAiLimitTimestamp(value) {
+  const num = typeof value === 'string' && value.trim() !== '' ? Number(value) : value;
+  if (typeof num !== 'number' || !Number.isFinite(num) || num <= 0) return null;
+  if (num > Date.now() + AI_LIMIT_FUTURE_SKEW_MS) return null; // far-future garbage
+  return Math.floor(num);
+}
+
 const AVATAR_PALETTE = [
   'blue', 'violet', 'emerald', 'amber', 'rose',
   'cyan', 'fuchsia', 'lime', 'orange', 'teal',
@@ -68,6 +79,7 @@ class ProfileStore {
       createdAt: now,
       lastOpenedAt: null,
       directory: buildProfileDirectory(id),
+      aiLimitReachedAt: null,
     };
     await this._mutate((data) => {
       data.profiles.push(profile);
@@ -113,6 +125,27 @@ class ProfileStore {
     } catch {
       /* never block opening a profile because of a bookkeeping failure */
     }
+  }
+
+  /**
+   * Sets or clears the profile's AI usage-limit timestamp.
+   * Pass an epoch-ms number to mark when the limit was reached, or null to clear.
+   * @returns {Promise<object>} the updated profile
+   */
+  async setAiLimit(id, reachedAt) {
+    assertId(id);
+    const value = reachedAt === null ? null : sanitizeAiLimitTimestamp(reachedAt);
+    if (reachedAt !== null && value === null) {
+      throw new Error('زمان محدودیت نامعتبر است.');
+    }
+    let updated = null;
+    await this._mutate((data) => {
+      const profile = data.profiles.find((p) => p.id === id);
+      if (!profile) throw new Error('پروفایل یافت نشد. شاید حذف شده باشد.');
+      profile.aiLimitReachedAt = value;
+      updated = { ...profile };
+    });
+    return updated;
   }
 
   /** Synchronous-ish helper used by the smoke test only. */
@@ -270,6 +303,7 @@ function readFromDisk(filePath) {
         createdAt: typeof p.createdAt === 'string' ? p.createdAt : new Date().toISOString(),
         lastOpenedAt: typeof p.lastOpenedAt === 'string' ? p.lastOpenedAt : null,
         directory: sanitizeProfileDirectory(p.directory, p.id),
+        aiLimitReachedAt: sanitizeAiLimitTimestamp(p.aiLimitReachedAt),
       }));
     return { version: STORE_VERSION, profiles: clean };
   } catch (error) {

@@ -1,20 +1,35 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   CalendarDays,
   Check,
   Globe,
   Copy,
   History,
+  Hourglass,
   Loader2,
   Mail,
   Pencil,
+  Timer,
+  TimerOff,
   Trash2,
 } from 'lucide-react';
-import { avatarStyle, formatDate, initialsFor, timeAgo } from '../lib/profileUtils';
+import { avatarStyle, formatDate, initialsFor, limitElapsed, timeAgo } from '../lib/profileUtils';
 
-export default function ProfileCard({ profile, onOpen, onEdit, onDelete, opening, chromeAvailable = true }) {
+export default function ProfileCard({ profile, onOpen, onEdit, onDelete, onToggleAiLimit, opening, chromeAvailable = true }) {
   const [copied, setCopied] = useState(false);
   const isOpening = opening === profile.id;
+
+  // AI usage-limit state — persisted on the profile itself (profiles.json).
+  const limitAt = Number.isFinite(profile.aiLimitReachedAt) ? profile.aiLimitReachedAt : null;
+  const limitActive = limitAt !== null;
+  const [now, setNow] = useState(() => Date.now());
+
+  // Keep the elapsed «ساعت : دقیقه» readout fresh while the app is open.
+  useEffect(() => {
+    if (!limitActive) return undefined;
+    const id = window.setInterval(() => setNow(Date.now()), 30000);
+    return () => window.clearInterval(id);
+  }, [limitActive]);
 
   const directory = profile.directory ?? `profiles/profile-${profile.id}`;
 
@@ -29,7 +44,10 @@ export default function ProfileCard({ profile, onOpen, onEdit, onDelete, opening
   };
 
   return (
-    <article className="profile-card group relative flex flex-col rounded-2xl border border-tint-line bg-ink-800 p-5 shadow-card">
+    <article
+      aria-label={limitActive ? `${profile.name} — سقف استفادهٔ AI ثبت شده است` : undefined}
+      className={`profile-card group relative flex flex-col rounded-2xl border border-tint-line bg-ink-800 p-5 shadow-card${limitActive ? ' limit-card' : ''}`}
+    >
       {/* سربرگ: آواتار + هویت */}
       <div className="flex items-start gap-4">
         <div
@@ -94,6 +112,18 @@ export default function ProfileCard({ profile, onOpen, onEdit, onDelete, opening
         )}
       </div>
 
+      {/* ردیف پیگیری سقف استفادهٔ AI — فقط وقتی فعال است */}
+      {limitActive && (
+        <div
+          role="status"
+          className="mt-3 flex items-center gap-2 rounded-lg border border-rose-500/40 bg-rose-500/10 px-2.5 py-2 text-[11.5px] font-bold text-rose-500 shadow-[0_0_18px_rgba(244,63,94,0.18)]"
+        >
+          <Hourglass size={13} className="shrink-0" />
+          <span>از رسیدن به سقف AI:</span>
+          <span className="tabular-nums">{limitElapsed(limitAt, now)}</span>
+        </div>
+      )}
+
       {/* فضای خالی برای یکسان‌سازی ارتفاع کارت‌ها */}
       <div className="flex-1" />
 
@@ -117,6 +147,19 @@ export default function ProfileCard({ profile, onOpen, onEdit, onDelete, opening
               باز کردن در Chrome <Globe size={15} />
             </>
           )}
+        </button>
+        <button
+          onClick={() => onToggleAiLimit?.(profile, !limitActive)}
+          aria-pressed={limitActive}
+          className={`flex h-10 w-10 items-center justify-center rounded-xl border transition active:scale-95 ${
+            limitActive
+              ? 'border-rose-500/60 bg-rose-500/15 text-rose-400 shadow-[0_0_18px_rgba(244,63,94,0.4)] hover:bg-rose-500/25'
+              : 'border-tint-line bg-ink-850 text-slate-400 hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-500'
+          }`}
+          title={limitActive ? 'لغو وضعیت سقف AI' : 'ثبت رسیدن به سقف استفادهٔ AI'}
+          aria-label={limitActive ? `لغو سقف AI برای ${profile.name}` : `ثبت رسیدن به سقف AI برای ${profile.name}`}
+        >
+          {limitActive ? <TimerOff size={16} /> : <Timer size={16} />}
         </button>
         <button
           onClick={() => onEdit(profile)}
