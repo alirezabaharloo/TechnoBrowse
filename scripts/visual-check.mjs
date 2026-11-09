@@ -62,5 +62,9 @@ await page.waitForTimeout(300);
 await shot(page, 'delete-dialog');
 await page.keyboard.press('Escape');
 
+// ── Promo banner: appears 2.5s after load, sweeps for 16s ────────────────────
+await page.waitForTimeout(4200); // we are now ≥2.5s into the first sweep
+await shot(page, 'promo-banner');
+
 await browser.close();
 console.log('done:', results.join(', '));
