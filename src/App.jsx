@@ -5,6 +5,7 @@ import Header from './components/Header';
 import MainContent from './components/MainContent';
 import Footer from './components/Footer';
 import ModalLayer from './components/ModalLayer';
+import PromoBanner from './components/PromoBanner';
 
 const HOUR = 3600000;
 const DAY = 86400000;
@@ -225,6 +226,8 @@ export default function App() {
       />
 
       <Footer info={info} />
+
+      <PromoBanner />
 
       <ModalLayer
         modal={modal}

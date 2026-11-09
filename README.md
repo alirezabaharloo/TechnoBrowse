@@ -12,6 +12,7 @@ TechnoBrowse does **not** browse the web itself. Google Chrome renders every pag
 - **Persistent** — logins survive window closes, app restarts, and portable-app updates.
 - **Local-only** — `profiles.json` (metadata) plus the profile directories. No telemetry, no sync, no passwords ever stored or read.
 - **AI usage-limit tracker** — one tap per profile card marks the exact moment an AI service limit is reached; the card glows red and shows elapsed hours:minutes (auto-updating), persisted across restarts until you reset it.
+- **Floating Technowin promo** — every 5 minutes a sleek banner sweeps across the window (Technowin brand + Instagram/YouTube/Telegram/X), then disappears completely until the next cycle; fixed-position, pointer-transparent, reduced-motion aware.
 - **Dark & light themes** — toggle from the header in one click; the choice is remembered.
 
 **Requirement:** Google Chrome must be installed on the machine. TechnoBrowse detects it automatically (Program Files / LOCALAPPDATA, then the Windows registry) and tells you clearly if it is missing — it never falls back to a hidden embedded browser.
