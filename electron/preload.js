@@ -17,6 +17,8 @@ contextBridge.exposeInMainWorld('technobrowse', {
   createProfile: (input) => invoke('profiles:create', { name: input?.name, email: input?.email }),
   /** @returns {Promise<Profile>} */
   updateProfile: (id, input) => invoke('profiles:update', { id, name: input?.name, email: input?.email }),
+  /** Mark (or clear) the AI usage limit for a profile. @returns {Promise<Profile>} */
+  setProfileAiLimit: (id, enabled) => invoke('profiles:set-ai-limit', { id, enabled }),
   /** @returns {Promise<{ok: true}>} */
   deleteProfile: (id) => invoke('profiles:delete', { id }),
   /** @returns {Promise<{ok: true, reused: boolean}>} */

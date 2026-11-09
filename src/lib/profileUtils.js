@@ -35,6 +35,18 @@ export function faDigits(value) {
   return String(value).replace(/\d/g, (d) => FA_DIGITS[Number(d)]);
 }
 
+/** زمان گذشته از رسیدن به سقف AI را به «ساعت و دقیقه» فارسی برمی‌گرداند */
+export function limitElapsed(startMs, nowMs = Date.now()) {
+  const start = Number(startMs);
+  const now = Number(nowMs);
+  if (!Number.isFinite(start) || !Number.isFinite(now) || start <= 0) return '—';
+  const elapsedMinutes = Math.max(0, Math.floor((now - start) / 60000));
+  const hours = Math.floor(elapsedMinutes / 60);
+  const minutes = elapsedMinutes % 60;
+  if (hours === 0) return `${faDigits(minutes)} دقیقه`;
+  return `${faDigits(hours)} ساعت و ${faDigits(minutes)} دقیقه`;
+}
+
 export function timeAgo(iso) {
   if (!iso) return 'هرگز';
   const then = new Date(iso).getTime();

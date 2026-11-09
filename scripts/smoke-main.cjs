@@ -190,6 +190,31 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
     assert.ok(!spawnCalls[1].args[0].includes(profileA.id));
   });
 
+  await test('profiles:set-ai-limit stores Date.now()-class timestamps and persists them', async () => {
+    const before = Date.now();
+    const marked = await call('profiles:set-ai-limit', { id: profileB.id, enabled: true });
+    const after = Date.now();
+    assert.equal(typeof marked.aiLimitReachedAt, 'number');
+    assert.ok(marked.aiLimitReachedAt >= before && marked.aiLimitReachedAt <= after,
+      `timestamp comes from the main-process clock (${marked.aiLimitReachedAt})`);
+    const onDisk = JSON.parse(fs.readFileSync(path.join(tmpData, 'profiles.json'), 'utf8'));
+    const persisted = onDisk.profiles.find((x) => x.id === profileB.id);
+    assert.equal(persisted.aiLimitReachedAt, marked.aiLimitReachedAt, 'persisted to profiles.json');
+    const list = await call('profiles:list');
+    assert.equal(list.find((x) => x.id === profileB.id).aiLimitReachedAt, marked.aiLimitReachedAt);
+  });
+
+  await test('profiles:set-ai-limit with enabled:false clears the timestamp', async () => {
+    const cleared = await call('profiles:set-ai-limit', { id: profileB.id, enabled: false });
+    assert.equal(cleared.aiLimitReachedAt, null);
+    const onDisk = JSON.parse(fs.readFileSync(path.join(tmpData, 'profiles.json'), 'utf8'));
+    assert.equal(onDisk.profiles.find((x) => x.id === profileB.id).aiLimitReachedAt, null);
+  });
+
+  await test('profiles:set-ai-limit rejects invalid ids', async () => {
+    await assert.rejects(call('profiles:set-ai-limit', { id: '../../evil', enabled: true }), /نامعتبر/);
+  });
+
   await test('delete is REFUSED while the profile looks running', async () => {
     await assert.rejects(call('profiles:delete', { id: profileA.id }), /در حال اجراست/);
     const persisted = JSON.parse(fs.readFileSync(path.join(tmpData, 'profiles.json'), 'utf8'));

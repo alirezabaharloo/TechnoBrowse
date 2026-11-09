@@ -11,6 +11,7 @@ TechnoBrowse does **not** browse the web itself. Google Chrome renders every pag
 - **No Gmail auth wall** — profiles are created instantly with just a name. You log in manually, inside Chrome, by yourself.
 - **Persistent** — logins survive window closes, app restarts, and portable-app updates.
 - **Local-only** — `profiles.json` (metadata) plus the profile directories. No telemetry, no sync, no passwords ever stored or read.
+- **AI usage-limit tracker** — one tap per profile card marks the exact moment an AI service limit is reached; the card glows red and shows elapsed hours:minutes (auto-updating), persisted across restarts until you reset it.
 - **Dark & light themes** — toggle from the header in one click; the choice is remembered.
 
 **Requirement:** Google Chrome must be installed on the machine. TechnoBrowse detects it automatically (Program Files / LOCALAPPDATA, then the Windows registry) and tells you clearly if it is missing — it never falls back to a hidden embedded browser.
@@ -92,7 +93,7 @@ The executable is unsigned (code-signing certificates are intentionally out of s
 - **Chrome detection** — `TECHNOBROWSE_CHROME_PATH` env var wins; otherwise well-known locations (`%ProgramFiles%`, `%ProgramFiles(x86)%`, `%LOCALAPPDATA%`); otherwise the Windows registry `App Paths\chrome.exe` (the same lookup `start chrome` uses), then the `WOW6432Node` `InstallLocation`. Existence is always verified on disk. Not found? A clear amber banner explains the requirement with a button to the official download page and a **re-check** button. Nothing is installed automatically and no other engine is used.
 - **Already running?** — If TechnoBrowse itself launched Chrome for a profile and that process is still alive, clicking Open does **not** spawn a second Chrome against the same directory; you get a toast and the existing window is the one to use. If a profile was launched outside the app (a `SingletonLock` is present), spawning is still safe — Chrome forwards the call to the existing instance and just opens a new window there; it never initializes one data directory twice.
 - **Deleting a profile** — refused while that profile's Chrome is running (checked via the process table and the `SingletonLock`). Otherwise the app removes ONLY that profile's metadata from `profiles.json` and deletes ONLY that profile's `profiles/profile-<id>/` directory — cookies, sessions, tokens, cache, preferences and all. Other profiles are untouched.
-- `profiles.json` contains **only** metadata: `id`, `name`, optional `email` label, avatar color, timestamps, and the relative `directory`. No cookies, tokens, or passwords — ever. Chrome never gives them to TechnoBrowse, and TechnoBrowse never reads them.
+- `profiles.json` contains **only** metadata: `id`, `name`, optional `email` label, avatar color, timestamps, the relative `directory`, and the optional `aiLimitReachedAt` epoch-ms marker. No cookies, tokens, or passwords — ever. Chrome never gives them to TechnoBrowse, and TechnoBrowse never reads them.
 
 ### Data layout
 
@@ -120,6 +121,7 @@ Profiles from older (Electron embedded browser) builds are kept: their metadata 
 **Dashboard**
 - `+ Create New Profile` → enter a name (required) and an optional email label → **Create Profile**. Done. No sign-in.
 - Each card shows the avatar, name, email label, created/last-opened dates, the profile's directory (with copy button), a live **«در حال اجرا / running»** badge when that profile's Chrome is open, and **Open in Chrome** / edit / delete actions.
+- **AI limit tracker** — tap the timer icon on a card to mark the moment its AI quota runs out: the whole card switches to a red neon theme, a live readout counts up in hours and minutes, and the timestamp is stored in `profiles.json` so it survives restarts. Tap **TimerOff** to clear it. Nothing leaves your machine.
 - **Open in Chrome** launches real Google Chrome with the profile's directory. Multiple profiles run side by side, fully independently.
 
 Log into Gmail, ChatGPT, Gemini, Claude, GitHub… manually, inside Chrome. Credentials never touch the app — they're typed into the website, inside that profile's isolated Chrome storage.
@@ -176,8 +178,8 @@ TechnoBrowse/
 | Check | Result |
 |---|---|
 | `npm run build` (Vite, dashboard) | ✅ passing |
-| `npm test` — profile store, Chrome detection helpers | ✅ 16/16 |
-| `npm run smoke` — main-process IPC/launch/delete/missing-Chrome | ✅ 12/12 |
+| `npm test` — profile store, Chrome detection helpers | ✅ 19/19 |
+| `npm run smoke` — main-process IPC/launch/delete/missing-Chrome/AI-limit | ✅ 15/15 |
 | `npm run render-check` — dashboard renders | ✅ 1/1 |
 | `npm run dom-check` — dashboard create/edit/delete flow | ✅ 9/9 |
 | Visual QA (`scripts/visual-check.mjs`) | ✅ see `docs/screenshots/` |

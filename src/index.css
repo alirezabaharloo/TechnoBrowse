@@ -192,6 +192,27 @@ body {
   box-shadow: 0 18px 48px var(--shadow-hover), 0 0 0 1px var(--card-hover-ring);
 }
 
+/* Red neon «AI usage limit reached» state — works on both themes */
+.limit-card {
+  border-color: rgba(244, 63, 94, 0.55) !important;
+  background:
+    linear-gradient(180deg, rgba(244, 63, 94, 0.12), rgba(244, 63, 94, 0.04) 55%, rgba(244, 63, 94, 0.07)),
+    var(--ink-800) !important;
+  box-shadow:
+    0 0 0 1px rgba(244, 63, 94, 0.4),
+    0 0 34px rgba(244, 63, 94, 0.32),
+    0 0 90px rgba(244, 63, 94, 0.12),
+    inset 0 0 26px rgba(244, 63, 94, 0.1) !important;
+}
+.limit-card:hover {
+  border-color: rgba(244, 63, 94, 0.75) !important;
+  box-shadow:
+    0 18px 48px var(--shadow-hover),
+    0 0 0 1px rgba(244, 63, 94, 0.55),
+    0 0 44px rgba(244, 63, 94, 0.4),
+    inset 0 0 26px rgba(244, 63, 94, 0.12) !important;
+}
+
 /* Focus visibility for keyboard users */
 :focus-visible {
   outline: 2px solid rgba(61, 139, 255, 0.65);

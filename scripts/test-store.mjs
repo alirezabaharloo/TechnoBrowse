@@ -154,6 +154,46 @@ await test('remove deletes only the targeted profile', async () => {
   assert.ok(!after.some((p) => p.id === victim.id));
 });
 
+await test('setAiLimit marks the limit, persists it, and clears it', async () => {
+  const p = await store.create({ name: 'AI Heavy' });
+  const marked = await store.setAiLimit(p.id, 1700000000000);
+  assert.equal(marked.aiLimitReachedAt, 1700000000000);
+  const onDisk = JSON.parse(fs.readFileSync(storeFile, 'utf8'));
+  const persisted = onDisk.profiles.find((x) => x.id === p.id);
+  assert.equal(persisted.aiLimitReachedAt, 1700000000000, 'timestamp persisted in profiles.json');
+  const cleared = await store.setAiLimit(p.id, null);
+  assert.equal(cleared.aiLimitReachedAt, null);
+  const again = await new ProfileStore(storeFile).get(p.id);
+  assert.equal(again.aiLimitReachedAt, null, 'clear survives a restart');
+});
+
+await test('setAiLimit rejects bogus timestamps and unknown ids', async () => {
+  const p = await store.create({ name: 'AI Validate' });
+  await assert.rejects(() => store.setAiLimit(p.id, -5), /نامعتبر/);
+  await assert.rejects(() => store.setAiLimit(p.id, NaN), /نامعتبر/);
+  await assert.rejects(() => store.setAiLimit(p.id, Number.MAX_SAFE_INTEGER), /نامعتبر/);
+  await assert.rejects(() => store.setAiLimit('f'.repeat(18), Date.now()), /یافت نشد/);
+});
+
+await test('garbage aiLimitReachedAt values on disk are self-healed to null', async () => {
+  const dirtyFile = path.join(tmp, 'dirty', 'profiles.json');
+  fs.mkdirSync(path.dirname(dirtyFile), { recursive: true });
+  const id = 'abcd1234abcd1234ab';
+  fs.writeFileSync(dirtyFile, JSON.stringify({
+    version: 1,
+    profiles: [
+      { id, name: 'Dirty', email: '', color: 'blue', createdAt: '2024-01-01T00:00:00.000Z', aiLimitReachedAt: 'not-a-number' },
+      { id: 'abcd1234abcd1234ac', name: 'Future', email: '', color: 'blue', createdAt: '2024-01-01T00:00:00.000Z', aiLimitReachedAt: Date.now() + 365 * 24 * 3600 * 1000 },
+      { id: 'abcd1234abcd1234ad', name: 'Valid', email: '', color: 'blue', createdAt: '2024-01-01T00:00:00.000Z', aiLimitReachedAt: 1700000000000 },
+    ],
+  }));
+  const list = await new ProfileStore(dirtyFile).list();
+  const byName = Object.fromEntries(list.map((p) => [p.name, p.aiLimitReachedAt]));
+  assert.equal(byName['Dirty'], null);
+  assert.equal(byName['Future'], null);
+  assert.equal(byName['Valid'], 1700000000000);
+});
+
 // ── chromeDetect ────────────────────────────────────────────────────────────
 
 await test('buildChromeLaunchArgs passes an argument array, never a shell string', async () => {
