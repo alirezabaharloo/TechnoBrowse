@@ -45,7 +45,7 @@ export default function ProfileCard({ profile, onOpen, onEdit, onDelete, onToggl
 
   return (
     <article
-      aria-label={limitActive ? `${profile.name} — سقف استفادهٔ AI ثبت شده است` : undefined}
+      aria-label={limitActive ? `${profile.name} — محدودیت استفادهٔ روزانه ثبت شده` : undefined}
       className={`profile-card group relative flex flex-col rounded-2xl border border-tint-line bg-ink-800 p-5 shadow-card${limitActive ? ' limit-card' : ''}`}
     >
       {/* سربرگ: آواتار + هویت */}
@@ -65,7 +65,7 @@ export default function ProfileCard({ profile, onOpen, onEdit, onDelete, onToggl
           <button
             onClick={() => onEdit(profile)}
             className="mt-1 flex max-w-full items-center gap-1.5 rounded-md text-start text-[12px] text-slate-400 transition hover:text-slate-100"
-            title={profile.email ? 'ویرایش برچسب ایمیل' : 'افزودن برچسب ایمیل'}
+            title={profile.email ? 'تغییر برچسب ایمیل' : 'افزودن برچسب ایمیل'}
           >
             <Mail size={12} className="shrink-0" />
             {profile.email ? (
@@ -92,7 +92,7 @@ export default function ProfileCard({ profile, onOpen, onEdit, onDelete, onToggl
         <code
           dir="ltr"
           className="truncate rounded-md border border-tint-line bg-ink-850 px-2 py-1 text-left font-mono text-[10.5px] text-accent-400"
-          title="پوشهٔ دادهٔ Chrome این پروفایل (user-data-dir)"
+          title="پوشهٔ داده‌های Chrome این مرورگر"
         >
           {directory}
         </code>
@@ -112,14 +112,14 @@ export default function ProfileCard({ profile, onOpen, onEdit, onDelete, onToggl
         )}
       </div>
 
-      {/* ردیف پیگیری سقف استفادهٔ AI — فقط وقتی فعال است */}
+      {/* ردیف پیگیری محدودیت استفادهٔ روزانه — فقط وقتی فعال است */}
       {limitActive && (
         <div
           role="status"
           className="mt-3 flex items-center gap-2 rounded-lg border border-rose-500/40 bg-rose-500/10 px-2.5 py-2 text-[11.5px] font-bold text-rose-500 shadow-[0_0_18px_rgba(244,63,94,0.18)]"
         >
           <Hourglass size={13} className="shrink-0" />
-          <span>از رسیدن به سقف AI:</span>
+          <span>از رسیدن به محدودیت استفاده:</span>
           <span className="tabular-nums">{limitElapsed(limitAt, now)}</span>
         </div>
       )}
@@ -132,7 +132,7 @@ export default function ProfileCard({ profile, onOpen, onEdit, onDelete, onToggl
         <button
           onClick={() => onOpen(profile)}
           disabled={isOpening || chromeAvailable === false}
-          title={chromeAvailable === false ? 'ابتدا Google Chrome را نصب کنید' : 'باز کردن این پروفایل در Google Chrome'}
+          title={chromeAvailable === false ? 'اول باید Chrome رو نصب کنی' : 'باز کردن این مرورگر در Chrome'}
           className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-accent-600 to-accent-500
             text-[13px] font-bold text-white shadow-[0_6px_18px_rgba(37,99,235,0.35)]
             transition hover:from-accent-500 hover:to-accent-400 hover:shadow-[0_8px_22px_rgba(59,130,246,0.4)]
@@ -156,8 +156,8 @@ export default function ProfileCard({ profile, onOpen, onEdit, onDelete, onToggl
               ? 'border-rose-500/60 bg-rose-500/15 text-rose-400 shadow-[0_0_18px_rgba(244,63,94,0.4)] hover:bg-rose-500/25'
               : 'border-tint-line bg-ink-850 text-slate-400 hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-500'
           }`}
-          title={limitActive ? 'لغو وضعیت سقف AI' : 'ثبت رسیدن به سقف استفادهٔ AI'}
-          aria-label={limitActive ? `لغو سقف AI برای ${profile.name}` : `ثبت رسیدن به سقف AI برای ${profile.name}`}
+          title={limitActive ? 'برداشتن علامت محدودیت استفاده' : 'علامت زدن رسیدن به محدودیت استفاده'}
+          aria-label={limitActive ? `برداشتن علامت محدودیت استفاده برای ${profile.name}` : `علامت زدن رسیدن به محدودیت استفاده برای ${profile.name}`}
         >
           {limitActive ? <TimerOff size={16} /> : <Timer size={16} />}
         </button>
@@ -165,7 +165,7 @@ export default function ProfileCard({ profile, onOpen, onEdit, onDelete, onToggl
           onClick={() => onEdit(profile)}
           className="flex h-10 w-10 items-center justify-center rounded-xl border border-tint-line bg-ink-850 text-slate-400
             transition hover:border-tint-line-strong hover:bg-tint-fill hover:text-slate-100 active:scale-95"
-          title="ویرایش پروفایل"
+          title="ویرایش مرورگر"
           aria-label={`ویرایش ${profile.name}`}
         >
           <Pencil size={16} />
@@ -174,7 +174,7 @@ export default function ProfileCard({ profile, onOpen, onEdit, onDelete, onToggl
           onClick={() => onDelete(profile)}
           className="flex h-10 w-10 items-center justify-center rounded-xl border border-tint-line bg-ink-850 text-slate-400
             transition hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-500 active:scale-95"
-          title="حذف پروفایل"
+          title="حذف مرورگر"
           aria-label={`حذف ${profile.name}`}
         >
           <Trash2 size={16} />

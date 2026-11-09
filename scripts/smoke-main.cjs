@@ -212,7 +212,7 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
   });
 
   await test('profiles:set-ai-limit rejects invalid ids', async () => {
-    await assert.rejects(call('profiles:set-ai-limit', { id: '../../evil', enabled: true }), /نامعتبر/);
+    await assert.rejects(call('profiles:set-ai-limit', { id: '../../evil', enabled: true }), /درست نیست/);
   });
 
   await test('delete is REFUSED while the profile looks running', async () => {
@@ -240,7 +240,7 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
     process.env.TECHNOBROWSE_CHROME_PATH = path.join(tmpRoot, 'definitely-not-chrome.exe');
     const refreshed = await call('app:refresh-chrome');
     assert.equal(refreshed.found, false);
-    await assert.rejects(call('profiles:open', { id: profileA.id }), /گوگل|Chrome پیدا نشد|Google Chrome پیدا نشد/);
+    await assert.rejects(call('profiles:open', { id: profileA.id }), /کروم/);
     assert.equal(spawnCalls.length, spawnsBefore, 'no spawn without Chrome');
     // restore and re-check
     process.env.TECHNOBROWSE_CHROME_PATH = fakeChromePath;
@@ -249,7 +249,7 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
   });
 
   await test('delete refuses invalid profile ids before touching anything', async () => {
-    await assert.rejects(call('profiles:delete', { id: '../../etc' }), /نامعتبر/);
+    await assert.rejects(call('profiles:delete', { id: '../../etc' }), /درست نیست/);
   });
 
   // ── Report ─────────────────────────────────────────────────────────────────

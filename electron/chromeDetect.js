@@ -157,7 +157,7 @@ function detectChrome({ env = process.env, platform = process.platform, run = ex
 
   return {
     found: false,
-    error: 'Google Chrome پیدا نشد. برای باز کردن پروفایل‌ها باید Google Chrome نصب باشد.',
+    error: 'گوگل کروم نصب نیست؛ برای باز کردن مرورگرها اول باید Chrome رو نصب کنی.',
   };
 }
 

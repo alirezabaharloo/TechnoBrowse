@@ -1,4 +1,4 @@
-// ابزارهای نمایشی پروفایل‌ها (فارسی)
+// ابزارهای نمایشی مرورگرها (فارسی)
 
 export const AVATAR_STYLES = {
   blue: 'from-sky-400 to-blue-600 text-white',
@@ -35,7 +35,7 @@ export function faDigits(value) {
   return String(value).replace(/\d/g, (d) => FA_DIGITS[Number(d)]);
 }
 
-/** زمان گذشته از رسیدن به سقف AI را به «ساعت و دقیقه» فارسی برمی‌گرداند */
+/** زمان گذشته از رسیدن به محدودیت استفاده را به «ساعت و دقیقه» فارسی برمی‌گرداند */
 export function limitElapsed(startMs, nowMs = Date.now()) {
   const start = Number(startMs);
   const now = Number(nowMs);

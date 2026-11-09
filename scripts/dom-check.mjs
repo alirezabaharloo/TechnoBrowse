@@ -77,26 +77,26 @@ const setInput = async (element, value) => {
 const findByText = (selector, snippet) =>
   Array.from(document.querySelectorAll(selector)).find((el) => el.textContent?.includes(snippet));
 
-check('داشبورد پروفایل‌های نمونه را نشان می‌دهد', text().includes('حساب کاری') && text().includes('شخصی'));
+check('داشبورد مرورگرهای نمونه را نشان می‌دهد', text().includes('حساب کاری') && text().includes('شخصی'));
 
 const createButtons = Array.from(document.querySelectorAll('button')).filter((b) =>
-  b.textContent.includes('ایجاد پروفایل جدید')
+  b.textContent.includes('ایجاد مرورگر جدید')
 );
-check('دکمهٔ برجستۀ «ایجاد پروفایل جدید» وجود دارد', createButtons.length >= 1);
+check('دکمهٔ برجستۀ «ایجاد مرورگر جدید» وجود دارد', createButtons.length >= 1);
 
 // Open the create modal
 await click(createButtons[0]);
-check('مودال ساخت پروفایل باز می‌شود', !!document.querySelector('#profile-name'));
+check('مودال ساخت مرورگر باز می‌شود', !!document.querySelector('#profile-name'));
 
 // Submit with an empty name → validation error
 const submitButton = Array.from(document.querySelectorAll('button[type="submit"]')).find((b) =>
-  b.textContent.includes('ایجاد پروفایل')
+  b.textContent.includes('ایجاد مرورگر')
 );
 check('دکمهٔ ثبت تا وارد کردن نام غیرفعال است', submitButton.disabled === true);
 
 // Type a name and confirm enabled
 const nameInput = document.querySelector('#profile-name');
-await setInput(nameInput, 'پروفایل تازهٔ من');
+await setInput(nameInput, 'مرورگر تازهٔ من');
 check('دکمهٔ ثبت بعد از وارد کردن نام فعال می‌شود', submitButton.disabled === false);
 
 // Create it
@@ -104,33 +104,33 @@ await click(submitButton);
 await act(async () => {
   await new Promise((resolve) => setTimeout(resolve, 30));
 });
-check('پروفایل جدید در شبکه ظاهر می‌شود', text().includes('پروفایل تازهٔ من'));
+check('مرورگر جدید در شبکه ظاهر می‌شود', text().includes('مرورگر تازهٔ من'));
 
 // Open the delete dialog for the new profile and cancel it
-const card = Array.from(document.querySelectorAll('article')).find((el) => el.textContent.includes('پروفایل تازهٔ من'));
+const card = Array.from(document.querySelectorAll('article')).find((el) => el.textContent.includes('مرورگر تازهٔ من'));
 const deleteButton = card?.querySelector('button[aria-label^="حذف"]');
 await click(deleteButton);
-check('دیالوگ حذف با فهرست پیامدها باز می‌شود', text().includes('کوکی‌ها و نشست‌های ورود'));
+check('دیالوگ حذف با فهرست پیامدها باز می‌شود', text().includes('کوکی‌ها و اطلاعات ورود'));
 
 const cancelButton = Array.from(document.querySelectorAll('button')).find((b) => b.textContent.trim() === 'انصراف');
 await click(cancelButton);
-check('با انصراف دیالوگ بسته می‌شود و پروفایل می‌ماند', text().includes('پروفایل تازهٔ من'));
+check('با انصراف دیالوگ بسته می‌شود و مرورگر می‌ماند', text().includes('مرورگر تازهٔ من'));
 
 // Confirm deletion for real (re-query: React re-rendered since we grabbed references)
-const card2 = Array.from(document.querySelectorAll('article')).find((el) => el.textContent.includes('پروفایل تازهٔ من'));
+const card2 = Array.from(document.querySelectorAll('article')).find((el) => el.textContent.includes('مرورگر تازهٔ من'));
 const deleteButton2 = card2?.querySelector('button[aria-label^="حذف"]');
 await click(deleteButton2);
 const confirmButton = Array.from(document.querySelectorAll('button')).find((b) =>
-  b.textContent.trim() === 'حذف پروفایل'
+  b.textContent.trim() === 'حذف مرورگر'
 );
 await click(confirmButton);
 await act(async () => {
   await new Promise((resolve) => setTimeout(resolve, 30));
 });
 const remainingCards = Array.from(document.querySelectorAll('article')).filter((el) =>
-  el.textContent.includes('پروفایل تازهٔ من')
+  el.textContent.includes('مرورگر تازهٔ من')
 );
-check('بعد از حذف تأییدشده پروفایل حذف می‌شود', remainingCards.length === 0);
+check('بعد از حذف تأییدشده مرورگر پاک می‌شود', remainingCards.length === 0);
 
 await act(async () => {
   root.unmount();

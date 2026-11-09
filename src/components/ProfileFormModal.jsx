@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { CircleAlert, Loader2, Mail, Sparkles, User, X } from 'lucide-react';
 
 /**
- * مودال مشترک ساخت و ویرایش پروفایل
+ * مودال مشترک ساخت و ویرایش مرورگر
  * mode: 'create' | 'edit'
  */
 export default function ProfileFormModal({ mode, initialProfile, onClose, onSubmit }) {
@@ -33,7 +33,7 @@ export default function ProfileFormModal({ mode, initialProfile, onClose, onSubm
     event?.preventDefault();
     setError('');
     if (!nameValid) {
-      setError('لطفاً نام پروفایل را وارد کنید (حداکثر ۶۰ نویسه).');
+      setError('لطفاً یه اسم برای مرورگر وارد کن (حداکثر ۶۰ نویسه).');
       return;
     }
     setBusy(true);
@@ -41,7 +41,7 @@ export default function ProfileFormModal({ mode, initialProfile, onClose, onSubm
       await onSubmit({ name: trimmedName, email: email.trim() });
       onClose();
     } catch (err) {
-      setError(err?.message || 'مشکلی پیش آمد. لطفاً دوباره تلاش کنید.');
+      setError(err?.message || 'یه مشکلی پیش اومد؛ دوباره امتحان کن.');
       setBusy(false);
     }
   };
@@ -75,10 +75,10 @@ export default function ProfileFormModal({ mode, initialProfile, onClose, onSubm
             />
             <div>
               <h2 id="profile-form-title" className="text-[16px] font-extrabold text-slate-100">
-                {isEdit ? 'ویرایش پروفایل' : 'ایجاد پروفایل جدید'}
+                {isEdit ? 'ویرایش مرورگر' : 'ایجاد مرورگر جدید'}
               </h2>
               <p className="text-[11.5px] text-slate-400">
-                {isEdit ? 'تغییر نام یا برچسب ایمیل' : 'فوری، ایزوله و بدون نیاز به ورود'}
+                {isEdit ? 'تغییر اسم یا برچسب ایمیل' : 'فوری و بدون هیچ ورودی'}
               </p>
             </div>
           </div>
@@ -96,7 +96,7 @@ export default function ProfileFormModal({ mode, initialProfile, onClose, onSubm
           {/* نام */}
           <div>
             <label htmlFor="profile-name" className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-300">
-              نام پروفایل <span className="text-accent-400">*</span>
+              اسم مرورگر <span className="text-accent-400">*</span>
             </label>
             <div className="flex items-center gap-2 rounded-xl border border-tint-line bg-ink-850 px-3 transition focus-within:border-[rgba(61,139,255,0.6)] focus-within:bg-ink-800 focus-within:ring-2 focus-within:ring-[rgba(61,139,255,0.15)]">
               <User size={16} className="shrink-0 text-slate-500" />
@@ -117,7 +117,7 @@ export default function ProfileFormModal({ mode, initialProfile, onClose, onSubm
           {/* ایمیل (برچسب اختیاری فقط) */}
           <div>
             <label htmlFor="profile-email" className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-300">
-              ایمیل <span className="font-normal text-slate-500">(اختیاری، فقط برچسب)</span>
+              ایمیل <span className="font-normal text-slate-500">(اختیاری؛ فقط یه برچسبه)</span>
             </label>
             <div className="flex items-center gap-2 rounded-xl border border-tint-line bg-ink-850 px-3 transition focus-within:border-[rgba(61,139,255,0.6)] focus-within:bg-ink-800 focus-within:ring-2 focus-within:ring-[rgba(61,139,255,0.15)]">
               <Mail size={16} className="shrink-0 text-slate-500" />
@@ -135,7 +135,7 @@ export default function ProfileFormModal({ mode, initialProfile, onClose, onSubm
               />
             </div>
             <p className="mt-1.5 text-[11px] leading-6 text-slate-400">
-              برچسبی برای تشخیص پروفایل‌ها از هم. TechnoBrowse هرگز وارد نمی‌شود، اعتبارسنجی نمی‌کند و گذرواژه‌ای ذخیره نمی‌کند.
+              فقط برای اینکه مرورگرها رو از هم تشخیص بدی. TechnoBrowse هیچ‌وقت وارد حسابت نمی‌شه، چیزی رو چک نمی‌کنه و رمزی ذخیره نمی‌کنه.
             </p>
           </div>
 
@@ -168,9 +168,9 @@ export default function ProfileFormModal({ mode, initialProfile, onClose, onSubm
                   <Loader2 size={15} className="animate-spin" /> {isEdit ? 'در حال ذخیره…' : 'در حال ایجاد…'}
                 </>
               ) : isEdit ? (
-                'ذخیرهٔ تغییرات'
+                'ذخیره کردن تغییرات'
               ) : (
-                'ایجاد پروفایل'
+                'ایجاد مرورگر'
               )}
             </button>
           </div>

@@ -38,9 +38,9 @@ export default function MainContent({
               <AlertTriangle size={22} className="text-amber-600" />
             </div>
             <div className="min-w-0">
-              <p className="text-[13px] font-bold text-slate-100">Google Chrome پیدا نشد</p>
+              <p className="text-[13px] font-bold text-slate-100">کروم پیدا نشد</p>
               <p className="text-[11.5px] leading-6 text-slate-400">
-                TechnoBrowse فقط مدیریت‌کننده است و خودش صفحهٔ وب را باز نمی‌کند. برای باز کردن هر پروفایل باید Google Chrome نصب باشد.
+                TechnoBrowse فقط مدیره و خودش سایت باز نمی‌کنه. برای باز کردن مرورگرها باید Chrome رو نصب داشته باشی.
               </p>
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-2 md:ms-auto">
@@ -48,13 +48,13 @@ export default function MainContent({
                 onClick={() => api?.openChromeDownload?.()}
                 className="flex h-9 items-center gap-1.5 rounded-lg border border-amber-600/40 bg-amber-600/15 px-3 text-[12px] font-bold text-amber-600 transition hover:bg-amber-600/25"
               >
-                <Globe size={14} /> صفحهٔ دریافت Chrome
+                <Globe size={14} /> گرفتن Chrome
               </button>
               <button
                 onClick={recheckChrome}
                 className="flex h-9 items-center gap-1.5 rounded-lg border border-tint-line bg-ink-850 px-3 text-[12px] font-bold text-slate-300 transition hover:bg-tint-fill hover:text-slate-100"
               >
-                <RefreshCw size={14} /> بررسی مجدد
+                <RefreshCw size={14} /> دوباره بررسی
               </button>
             </div>
           </section>
@@ -67,9 +67,9 @@ export default function MainContent({
               <ShieldCheck size={22} className="text-accent-400" />
             </div>
             <div>
-              <p className="text-[13px] font-bold text-slate-100">ایزوله‌سازی واقعی پروفایل‌ها</p>
+              <p className="text-[13px] font-bold text-slate-100">هر مرورگر، جدا از بقیه</p>
               <p className="text-[11.5px] leading-6 text-slate-400">
-                هر پروفایل یک <span dir="ltr">user-data-dir</span> مجزای Chrome است — کوکی‌ها، نشست‌های ورود، حافظهٔ محلی، IndexedDB و کش هیچ‌گاه از یک پروفایل خارج نمی‌شوند.
+                کوکی‌ها، نشست‌های ورود، اطلاعات سایت‌ها و کش هیچ‌وقت از یه مرورگر به مرورگر دیگه نمی‌ره — هر مرورگر فایل‌های خودش رو داره.
               </p>
             </div>
           </div>
@@ -78,7 +78,7 @@ export default function MainContent({
               <code className="max-w-[220px] truncate rounded-lg border border-tint-line bg-ink-850 px-2 py-1.5 font-mono text-[10px] text-slate-400" title={info.dataRoot}>
                 {info.dataRoot}
               </code>
-              <button onClick={copyDataRoot} className="rounded-lg p-2 text-slate-400 transition hover:bg-tint-fill hover:text-slate-200" title="کپی مسیر پوشهٔ داده" aria-label="کپی مسیر پوشهٔ داده">
+              <button onClick={copyDataRoot} className="rounded-lg p-2 text-slate-400 transition hover:bg-tint-fill hover:text-slate-200" title="کپی مسیر پوشهٔ داده‌ها" aria-label="کپی مسیر پوشهٔ داده‌ها">
                 {copiedPath ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
               </button>
               <button onClick={openDataRoot} className="rounded-lg p-2 text-slate-400 transition hover:bg-tint-fill hover:text-slate-200" title="باز کردن پوشهٔ داده" aria-label="باز کردن پوشهٔ داده">
@@ -88,7 +88,7 @@ export default function MainContent({
           )}
         </section>
 
-        {/* شبکهٔ پروفایل‌ها / حالت‌های مختلف */}
+        {/* شبکهٔ مرورگرها / حالت‌های مختلف */}
         {loading ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {[0, 1, 2].map((n) => (

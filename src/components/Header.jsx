@@ -30,7 +30,7 @@ export default function Header({ info, profiles, setModal }) {
             Techno<span className="text-accent-400">Browse</span>
           </h1>
           <p className="text-[9.5px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-            مدیر پروفایل‌های Chrome
+            مدیریت مرورگرهای Chrome
           </p>
         </div>
       </div>
@@ -44,7 +44,7 @@ export default function Header({ info, profiles, setModal }) {
         )}
         <span className="hidden items-center gap-1.5 rounded-full border border-tint-line bg-ink-800 px-3 py-1.5 text-[11px] font-medium text-slate-300 shadow-sm md:inline-flex">
           <Users size={12} />
-          {`${profiles.length.toLocaleString('fa-IR')} پروفایل`}
+          {`${profiles.length.toLocaleString('fa-IR')} مرورگر`}
         </span>
         <button
           onClick={() => setModal({ type: 'create' })}
@@ -53,8 +53,8 @@ export default function Header({ info, profiles, setModal }) {
             transition hover:from-accent-500 hover:to-accent-400 hover:shadow-[0_10px_30px_rgba(59,130,246,0.4)] active:scale-[0.98]"
         >
           <Plus size={17} strokeWidth={2.5} />
-          <span className="hidden sm:inline">ایجاد پروفایل جدید</span>
-          <span className="sm:hidden">پروفایل جدید</span>
+          <span className="hidden sm:inline">ایجاد مرورگر جدید</span>
+          <span className="sm:hidden">مرورگر جدید</span>
         </button>
       </div>
     </header>

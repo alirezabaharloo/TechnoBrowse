@@ -60,7 +60,7 @@ export default function App() {
           setChromeStatus({ found: true, source: 'demo' });
         }
       } catch (error) {
-        pushToast(error?.message || 'بارگذاری پروفایل‌ها ممکن نشد.', 'error');
+        pushToast(error?.message || 'بارگذاری مرورگرها انجام نشد.', 'error');
       } finally {
         if (mounted) setLoading(false);
       }
@@ -90,12 +90,12 @@ export default function App() {
         aiLimitReachedAt: null,
       };
       setProfiles((list) => [demo, ...list]);
-      pushToast(`پروفایل «${name}» ایجاد شد (حالت پیش‌نمایش).`);
+      pushToast(`مرورگر «${name}» ساخته شد (حالت پیش‌نمایش).`);
       return;
     }
     await api.createProfile({ name, email });
     await refresh();
-    pushToast(`پروفایل «${name}» ایجاد شد.`);
+    pushToast(`مرورگر «${name}» ساخته شد.`);
   };
 
   const handleEdit = async ({ name, email }) => {
@@ -103,26 +103,26 @@ export default function App() {
     if (!target) return;
     if (demoMode) {
       setProfiles((list) => list.map((p) => (p.id === target.id ? { ...p, name, email } : p)));
-      pushToast('پروفایل به‌روزرسانی شد (حالت پیش‌نمایش).');
+      pushToast('تغییرات مرورگر ذخیره شد (حالت پیش‌نمایش).');
       return;
     }
     await api.updateProfile(target.id, { name, email });
     await refresh();
-    pushToast('پروفایل به‌روزرسانی شد.');
+    pushToast('تغییرات مرورگر ذخیره شد.');
   };
 
   const handleDelete = async (target) => {
     if (demoMode) {
       setProfiles((list) => list.filter((p) => p.id !== target.id));
-      pushToast(`پروفایل «${target.name}» حذف شد (حالت پیش‌نمایش).`);
+      pushToast(`مرورگر «${target.name}» پاک شد (حالت پیش‌نمایش).`);
       return;
     }
     try {
       await api.deleteProfile(target.id);
       await refresh();
-      pushToast(`پروفایل «${target.name}» و تمام داده‌هایش حذف شد.`);
+      pushToast(`مرورگر «${target.name}» و همهٔ داده‌هاش پاک شد.`);
     } catch (error) {
-      pushToast(error?.message || 'حذف پروفایل ممکن نشد.', 'error');
+      pushToast(error?.message || 'پاک کردن مرورگر انجام نشد.', 'error');
     }
   };
 
@@ -132,7 +132,7 @@ export default function App() {
         list.map((p) => (p.id === profile.id ? { ...p, aiLimitReachedAt: enabled ? Date.now() : null } : p))
       );
       pushToast(
-        enabled ? `سقف AI برای «${profile.name}» ثبت شد.` : `وضعیت سقف AI برای «${profile.name}» برداشته شد.`,
+        enabled ? `این اکانت به محدودیت استفاده روزانه خودش رسیده.` : `علامت محدودیت استفاده برداشته شد.`,
         'info'
       );
       return;
@@ -141,30 +141,30 @@ export default function App() {
       await api.setProfileAiLimit(profile.id, enabled);
       await refresh();
       pushToast(
-        enabled ? `سقف AI برای «${profile.name}» ثبت شد.` : `وضعیت سقف AI برای «${profile.name}» برداشته شد.`,
+        enabled ? `این اکانت به محدودیت استفاده روزانه خودش رسیده.` : `علامت محدودیت استفاده برداشته شد.`,
         'success'
       );
     } catch (error) {
-      pushToast(error?.message || 'ذخیرهٔ وضعیت سقف AI ممکن نشد.', 'error');
+      pushToast(error?.message || 'ذخیرهٔ وضعیت محدودیت استفاده انجام نشد.', 'error');
     }
   };
 
   const handleOpen = async (profile) => {
     if (demoMode) {
-      pushToast('برای باز کردن پنجرهٔ پروفایل‌ها، اپلیکیشن دسکتاپ را اجرا کنید.', 'info');
+      pushToast('باز کردن مرورگر فقط تو نسخهٔ دسکتاپ کار می‌کنه؛ اینجا حالت پیش‌نمایشه.', 'info');
       return;
     }
     setOpeningId(profile.id);
     try {
       const result = await api.openProfile(profile.id);
       if (result?.reused) {
-        pushToast('این پروفایل هم‌اکنون در حال اجراست — پنجرهٔ Chrome آن را بررسی کنید.', 'info');
+        pushToast('این مرورگر همین الان بازه؛ پنجرهٔ Chrome ش رو ببین.', 'info');
       }
     } catch (error) {
-      if (error?.code === 'CHROME_NOT_FOUND' || /Chrome پیدا نشد/.test(error?.message ?? '')) {
+      if (error?.code === 'CHROME_NOT_FOUND' || /کروم/.test(error?.message ?? '')) {
         setChromeStatus({ found: false, error: error?.message });
       }
-      pushToast(error?.message || 'باز کردن پروفایل ممکن نشد.', 'error');
+      pushToast(error?.message || 'باز کردن مرورگر انجام نشد.', 'error');
     } finally {
       setOpeningId(null);
     }
@@ -176,11 +176,11 @@ export default function App() {
       const status = await api.refreshChromeStatus();
       setChromeStatus(status);
       pushToast(
-        status?.found ? 'Google Chrome پیدا شد — می‌توانید پروفایل‌ها را باز کنید.' : 'هنوز Google Chrome پیدا نشد.',
+        status?.found ? 'کروم پیدا شد؛ می‌تونی مرورگرها رو باز کنی.' : 'هنوز کروم پیدا نشد.',
         status?.found ? 'success' : 'error'
       );
     } catch {
-      pushToast('بررسی مجدد Chrome ممکن نشد.', 'error');
+      pushToast('بررسی دوبارهٔ کروم انجام نشد.', 'error');
     }
   };
 
@@ -254,9 +254,9 @@ function EmptyState({ onCreate }) {
           draggable={false}
         />
       </div>
-      <h2 className="text-xl font-extrabold text-slate-100">هنوز پروفایلی نساخته‌اید</h2>
+      <h2 className="text-xl font-extrabold text-slate-100">هنوز مرورگری نساختی</h2>
       <p className="mt-2 max-w-md text-[13px] leading-7 text-slate-400">
-        اولین پروفایل خود را بسازید. TechnoBrowse فقط مدیریت می‌کند — سایت‌ها داخل Google Chrome باز می‌شوند و هر پروفایل داده‌ها و نشست‌های خودش را جدا نگه می‌دارد؛ هیچ ورود یا تأیید جیمیلی در این برنامه لازم نیست.
+        اولین مرورگرت رو همین‌جا بساز؛ خبری از ورود و تأیید جیمیل نیست. سایت‌ها رو داخل Chrome باز می‌کنی و هر مرورگر کوکی‌ها و اطلاعات خودش رو جدا نگه می‌داره.
       </p>
       <button
         onClick={onCreate}
@@ -264,7 +264,7 @@ function EmptyState({ onCreate }) {
           text-[14px] font-bold text-white shadow-[0_8px_24px_rgba(37,99,235,0.35)]
           transition hover:from-accent-500 hover:to-accent-400 active:scale-[0.98]"
       >
-        <Plus size={18} strokeWidth={2.5} /> ایجاد پروفایل جدید
+        <Plus size={18} strokeWidth={2.5} /> ایجاد مرورگر جدید
       </button>
     </div>
   );

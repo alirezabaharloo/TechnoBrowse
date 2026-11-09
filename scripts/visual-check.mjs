@@ -42,7 +42,7 @@ await page.waitForTimeout(600);
 await shot(page, 'dashboard');
 
 // Open the create modal
-const createBtn = page.getByRole('button', { name: /ایجاد پروفایل جدید/ }).first();
+const createBtn = page.getByRole('button', { name: /ایجاد مرورگر جدید/ }).first();
 await createBtn.click();
 await page.waitForTimeout(350);
 await shot(page, 'create-modal');
@@ -51,7 +51,7 @@ await shot(page, 'create-modal');
 await page.locator('#profile-name').fill('پروژهٔ مشتری');
 await page.locator('#profile-email').fill('client@work-mail.com');
 await shot(page, 'create-modal-filled');
-await page.getByRole('button', { name: 'ایجاد پروفایل', exact: true }).click();
+await page.getByRole('button', { name: 'ایجاد مرورگر', exact: true }).click();
 await page.waitForTimeout(400);
 await shot(page, 'after-create');
 

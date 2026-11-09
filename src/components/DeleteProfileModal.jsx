@@ -23,7 +23,7 @@ export default function DeleteProfileModal({ profile, onClose, onConfirm }) {
       await onConfirm(profile);
       onClose();
     } catch (err) {
-      setError(err?.message || 'حذف پروفایل ممکن نشد. لطفاً دوباره تلاش کنید.');
+      setError(err?.message || 'پاک کردن انجام نشد؛ دوباره امتحان کن.');
       setBusy(false);
     }
   };
@@ -49,7 +49,7 @@ export default function DeleteProfileModal({ profile, onClose, onConfirm }) {
               <h2 id="delete-profile-title" className="text-[16px] font-extrabold text-slate-100">
                 حذف «{profile.name}»؟
               </h2>
-              <p className="text-[11.5px] text-slate-400">این عملیات قابل بازگشت نیست.</p>
+              <p className="text-[11.5px] text-slate-400">این کار قابل برگشت نیست.</p>
             </div>
           </div>
           <button
@@ -64,25 +64,25 @@ export default function DeleteProfileModal({ profile, onClose, onConfirm }) {
         <div className="space-y-4 px-6 pb-6 pt-4">
           <div className="rounded-xl border border-tint-line bg-ink-850 p-3.5">
             <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-              همهٔ موارد زیر برای همیشه پاک می‌شوند
+              همهٔ اینا برای همیشه پاک می‌شن
             </p>
             <ul className="space-y-1.5 text-[12.5px] text-slate-300">
-              <li className="flex items-center gap-2"><Cookie size={13} className="shrink-0 text-rose-500" /> کوکی‌ها و نشست‌های ورود</li>
-              <li className="flex items-center gap-2"><Database size={13} className="shrink-0 text-rose-500" /> حافظهٔ محلی، IndexedDB و کش</li>
-              <li className="flex items-center gap-2"><AlertTriangle size={13} className="shrink-0 text-rose-500" /> ورودهای سایت‌ها در این پروفایل</li>
+              <li className="flex items-center gap-2"><Cookie size={13} className="shrink-0 text-rose-500" /> کوکی‌ها و اطلاعات ورود</li>
+              <li className="flex items-center gap-2"><Database size={13} className="shrink-0 text-rose-500" /> اطلاعات سایت‌ها و کش</li>
+              <li className="flex items-center gap-2"><AlertTriangle size={13} className="shrink-0 text-rose-500" /> ورودهات به سایت‌ها تو این مرورگر</li>
             </ul>
           </div>
 
           {isRunning && (
             <p className="flex items-start gap-2 rounded-lg border border-amber-600/40 bg-amber-600/10 p-2.5 text-[12px] leading-6 text-amber-600">
               <Globe size={14} className="mt-0.5 shrink-0" />
-              این پروفایل هم‌اکنون در حال اجراست. پنجرهٔ Google Chrome مربوط به آن را ببندید و سپس حذف کنید.
+              این مرورگر همین الان بازه؛ اول پنجرهٔ Chrome ش رو ببند، بعد پاک کن.
             </p>
           )}
 
           <p className="flex items-center gap-2 text-[12px] text-emerald-600">
             <ShieldCheck size={14} className="shrink-0" />
-            سایر پروفایل‌ها و داده‌هایشان کاملاً دست‌نخورده می‌ماند.
+            بقیهٔ مرورگرها و داده‌هاشون دست‌نخورده می‌مونن.
           </p>
 
           {error && <p className="text-[12px] text-rose-500">{error}</p>}
@@ -107,7 +107,7 @@ export default function DeleteProfileModal({ profile, onClose, onConfirm }) {
                   <Loader2 size={15} className="animate-spin" /> در حال حذف…
                 </>
               ) : (
-                'حذف پروفایل'
+                'حذف مرورگر'
               )}
             </button>
           </div>

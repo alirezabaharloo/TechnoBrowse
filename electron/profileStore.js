@@ -94,7 +94,7 @@ class ProfileStore {
     let updated = null;
     await this._mutate((data) => {
       const profile = data.profiles.find((p) => p.id === id);
-      if (!profile) throw new Error('پروفایل یافت نشد. شاید حذف شده باشد.');
+      if (!profile) throw new Error('این مرورگر پیدا نشد. شاید حذف شده.');
       if (name !== undefined) profile.name = name;
       if (email !== undefined) profile.email = email;
       updated = { ...profile };
@@ -108,7 +108,7 @@ class ProfileStore {
     let removed = null;
     await this._mutate((data) => {
       const index = data.profiles.findIndex((p) => p.id === id);
-      if (index === -1) throw new Error('پروفایل یافت نشد. شاید قبلاً حذف شده باشد.');
+      if (index === -1) throw new Error('این مرورگر پیدا نشد. شاید قبل‌تر حذف شده.');
       removed = data.profiles[index];
       data.profiles.splice(index, 1);
     });
@@ -136,12 +136,12 @@ class ProfileStore {
     assertId(id);
     const value = reachedAt === null ? null : sanitizeAiLimitTimestamp(reachedAt);
     if (reachedAt !== null && value === null) {
-      throw new Error('زمان محدودیت نامعتبر است.');
+      throw new Error('زمان محدودیت درست نیست.');
     }
     let updated = null;
     await this._mutate((data) => {
       const profile = data.profiles.find((p) => p.id === id);
-      if (!profile) throw new Error('پروفایل یافت نشد. شاید حذف شده باشد.');
+      if (!profile) throw new Error('این مرورگر پیدا نشد. شاید حذف شده.');
       profile.aiLimitReachedAt = value;
       updated = { ...profile };
     });
@@ -207,7 +207,7 @@ function resolveProfileDataDir(dataRoot, profile) {
   const profilesRoot = path.resolve(dataRoot, 'profiles');
   const absolute = path.resolve(dataRoot, relative);
   if (!absolute.startsWith(profilesRoot + path.sep)) {
-    throw new Error('مسیر پوشهٔ پروفایل نامعتبر است.');
+    throw new Error('مسیر این مرورگر درست نیست.');
   }
   return absolute;
 }
@@ -223,7 +223,7 @@ function generateProfileId() {
 
 function assertId(id) {
   if (typeof id !== 'string' || !/^[a-z0-9-]{4,64}$/i.test(id)) {
-    throw new Error('شناسهٔ پروفایل نامعتبر است.');
+    throw new Error('شناسهٔ مرورگر درست نیست.');
   }
 }
 
@@ -242,11 +242,11 @@ function validateProfileInput(input, { partial }) {
     const raw = String(source.name ?? '');
     // Reject control characters (tabs/newlines/etc.) before collapsing whitespace.
     // eslint-disable-next-line no-control-regex
-    if (/[\0-\x1f\x7f]/.test(raw)) throw new Error('نام پروفایل شامل نویسهٔ نامعتبر است.');
+    if (/[\0-\x1f\x7f]/.test(raw)) throw new Error('اسم مرورگر نویسهٔ نادرست داره.');
     const name = raw.replace(/\s+/g, ' ').trim();
-    if (!name) throw new Error('لطفاً نام پروفایل را وارد کنید.');
+    if (!name) throw new Error('لطفاً اسم مرورگر رو وارد کن.');
     if (name.length > MAX_NAME_LENGTH) {
-      throw new Error(`نام پروفایل باید حداکثر ${MAX_NAME_LENGTH} نویسه باشد.`);
+      throw new Error(`اسم مرورگر باید حداکثر ${MAX_NAME_LENGTH} نویسه باشه.`);
     }
     result.name = name;
   }
@@ -257,12 +257,12 @@ function validateProfileInput(input, { partial }) {
       result.email = '';
     } else {
       if (email.length > MAX_EMAIL_LENGTH) {
-        throw new Error(`برچسب ایمیل باید حداکثر ${MAX_EMAIL_LENGTH} نویسه باشد.`);
+        throw new Error(`برچسب ایمیل باید حداکثر ${MAX_EMAIL_LENGTH} نویسه باشه.`);
       }
       // eslint-disable-next-line no-control-regex
-      if (/[\0-\x1f\x7f]/.test(email)) throw new Error('برچسب ایمیل شامل نویسهٔ نامعتبر است.');
+      if (/[\0-\x1f\x7f]/.test(email)) throw new Error('برچسب ایمیل نویسهٔ نادرست داره.');
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        throw new Error('این نشانی ایمیل درست به نظر نمی‌رسد. مثال: name@gmail.com');
+        throw new Error('این ایمیل درست به نظر نمی‌رسه. مثال: name@gmail.com');
       }
       result.email = email.toLowerCase();
     }

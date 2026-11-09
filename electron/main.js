@@ -178,12 +178,12 @@ async function profilesWithStatus() {
 
 async function launchProfile(id) {
   const profile = await store.get(id);
-  if (!profile) throw new Error('پروفایل یافت نشد. شاید حذف شده باشد.');
+  if (!profile) throw new Error('این مرورگر پیدا نشد. شاید حذف شده.');
 
   const status = getChromeStatus();
   if (!status.found) {
     const error = new Error(
-      'Google Chrome پیدا نشد. برای باز کردن پروفایل‌ها باید Google Chrome نصب باشد.'
+      'گوگل کروم نصب نیست؛ برای باز کردن مرورگرها اول باید Chrome رو نصب کنی.'
     );
     error.code = 'CHROME_NOT_FOUND';
     throw error;
@@ -224,12 +224,12 @@ async function launchProfile(id) {
 
 async function deleteProfileCompletely(id) {
   const profile = await store.get(id);
-  if (!profile) throw new Error('پروفایل یافت نشد. شاید قبلاً حذف شده باشد.');
+  if (!profile) throw new Error('این مرورگر پیدا نشد. شاید قبل‌تر حذف شده.');
 
   const absoluteDir = resolveProfileDataDir(storage.dataRoot, profile);
   if (isProfileInUse(absoluteDir, id)) {
     throw new Error(
-      `پروفایل «${profile.name}» در حال اجراست. ابتدا پنجرهٔ Google Chrome مربوط به این پروفایل را ببندید و دوباره تلاش کنید.`
+      `«${profile.name}» الان در حال اجراست؛ اول پنجرهٔ Chrome ش رو ببند، بعد پاک کن.`
     );
   }
 
@@ -287,7 +287,7 @@ function registerDashboardIpc() {
 
   ipcMain.handle('profiles:delete', async (_event, payload) => {
     const id = String(payload?.id ?? '');
-    if (!/^[a-z0-9-]{4,64}$/i.test(id)) throw new Error('شناسهٔ پروفایل نامعتبر است.');
+    if (!/^[a-z0-9-]{4,64}$/i.test(id)) throw new Error('شناسهٔ مرورگر درست نیست.');
     await deleteProfileCompletely(id);
     broadcastProfilesChanged();
     return { ok: true };
@@ -295,7 +295,7 @@ function registerDashboardIpc() {
 
   ipcMain.handle('profiles:set-ai-limit', async (_event, payload) => {
     const id = String(payload?.id ?? '');
-    if (!/^[a-z0-9-]{4,64}$/i.test(id)) throw new Error('شناسهٔ پروفایل نامعتبر است.');
+    if (!/^[a-z0-9-]{4,64}$/i.test(id)) throw new Error('شناسهٔ مرورگر درست نیست.');
     // The main process owns the clock — the timestamp is exactly "now",
     // never a renderer-supplied value.
     const reachedAt = payload?.enabled === true ? Date.now() : null;
@@ -306,7 +306,7 @@ function registerDashboardIpc() {
 
   ipcMain.handle('profiles:open', async (_event, payload) => {
     const id = String(payload?.id ?? '');
-    if (!/^[a-z0-9-]{4,64}$/i.test(id)) throw new Error('شناسهٔ پروفایل نامعتبر است.');
+    if (!/^[a-z0-9-]{4,64}$/i.test(id)) throw new Error('شناسهٔ مرورگر درست نیست.');
     const result = await launchProfile(id);
     broadcastProfilesChanged();
     return result;
@@ -342,7 +342,7 @@ function registerDashboardIpc() {
       const error = await shell.openPath(storage.dataRoot);
       return error ? { error } : { ok: true };
     } catch (error) {
-      return { error: error?.message || 'باز کردن پوشهٔ داده ممکن نشد.' };
+      return { error: error?.message || 'باز کردن پوشهٔ داده انجام نشد.' };
     }
   });
 }

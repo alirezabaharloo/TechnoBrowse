@@ -92,13 +92,13 @@ await test('resolveProfileDataDir stays inside <dataRoot>/profiles and rejects e
   const absolute = resolveProfileDataDir(tmp, { id, directory: '/etc/passwd' });
   assert.equal(absolute, path.join(tmp, 'profiles', `profile-${id}`));
   // a garbage id is rejected outright
-  assert.throws(() => resolveProfileDataDir(tmp, { id: '../bad', directory: 'profiles/profile-../bad' }), /نامعتبر/);
+  assert.throws(() => resolveProfileDataDir(tmp, { id: '../bad', directory: 'profiles/profile-../bad' }), /درست نیست/);
 });
 
 await test('create validates name length and characters', async () => {
-  await assert.rejects(() => store.create({ name: '' }), /پروفایل/);
+  await assert.rejects(() => store.create({ name: '' }), /اسم مرورگر/);
   await assert.rejects(() => store.create({ name: 'x'.repeat(61) }), /60/);
-  await assert.rejects(() => store.create({ name: 'bad\nname' }), /نامعتبر/);
+  await assert.rejects(() => store.create({ name: 'bad\nname' }), /نادرست/);
 });
 
 await test('create validates optional email shape but allows empty', async () => {
@@ -117,8 +117,8 @@ await test('update edits name/email only, keeps id + directory stable', async ()
 });
 
 await test('update/remove reject unknown ids and bad id formats', async () => {
-  await assert.rejects(() => store.update('f'.repeat(18), { name: 'Nope' }), /یافت نشد/);
-  await assert.rejects(() => store.remove('!!bad'), /نامعتبر/);
+  await assert.rejects(() => store.update('f'.repeat(18), { name: 'Nope' }), /پیدا نشد/);
+  await assert.rejects(() => store.remove('!!bad'), /درست نیست/);
 });
 
 await test('markOpened sets lastOpenedAt', async () => {
@@ -169,10 +169,10 @@ await test('setAiLimit marks the limit, persists it, and clears it', async () =>
 
 await test('setAiLimit rejects bogus timestamps and unknown ids', async () => {
   const p = await store.create({ name: 'AI Validate' });
-  await assert.rejects(() => store.setAiLimit(p.id, -5), /نامعتبر/);
-  await assert.rejects(() => store.setAiLimit(p.id, NaN), /نامعتبر/);
-  await assert.rejects(() => store.setAiLimit(p.id, Number.MAX_SAFE_INTEGER), /نامعتبر/);
-  await assert.rejects(() => store.setAiLimit('f'.repeat(18), Date.now()), /یافت نشد/);
+  await assert.rejects(() => store.setAiLimit(p.id, -5), /درست نیست/);
+  await assert.rejects(() => store.setAiLimit(p.id, NaN), /درست نیست/);
+  await assert.rejects(() => store.setAiLimit(p.id, Number.MAX_SAFE_INTEGER), /درست نیست/);
+  await assert.rejects(() => store.setAiLimit('f'.repeat(18), Date.now()), /پیدا نشد/);
 });
 
 await test('garbage aiLimitReachedAt values on disk are self-healed to null', async () => {
