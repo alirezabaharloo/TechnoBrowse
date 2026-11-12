@@ -16,7 +16,7 @@ import { Sparkles } from 'lucide-react';
 
 const TRAVEL_MS = 16000;
 const FIRST_DELAY_MS = 1000;
-const INTERVAL_MS = 20 * 1000;
+const INTERVAL_MS = 10 * 60 * 1000;
 
 const BRAND_ICONS = [
   {

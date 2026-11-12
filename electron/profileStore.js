@@ -23,7 +23,7 @@ const MAX_EMAIL_LENGTH = 120;
 const PROFILE_DIR_RE = /^profiles\/profile-[a-z0-9-]{4,64}$/i;
 
 // Tolerated skew between the stored timestamp and "now" (clock adjustments).
-const AI_LIMIT_FUTURE_SKEW_MS = 5 * 60 * 1000;
+const AI_LIMIT_FUTURE_SKEW_MS = 10 * 60 * 1000;
 
 /** Keep only finite, positive, sane epoch-ms timestamps; anything else → null. */
 function sanitizeAiLimitTimestamp(value) {
