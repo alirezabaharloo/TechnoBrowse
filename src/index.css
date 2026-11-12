@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* Sahel — open-source Persian font by Saber Rastikerdar (OFL, see assets/fonts/OFL-Sahel.txt) */
 @font-face {
   font-family: 'Sahel';
@@ -42,9 +46,7 @@
   src: url('./assets/fonts/Sahel-Black.woff2') format('woff2');
 }
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+
 
 /* ── Theme variables ───────────────────────────────────────────────────────
    Dark is the default. [data-theme="light"] on <html> flips everything. */
@@ -282,7 +284,6 @@ body {
   right: 0;
   z-index: 40; /* above content, below modals (z-50) */
   display: flex;
-  pointer-events: none;
 }
 .promo-banner__track {
   display: flex;
@@ -312,14 +313,26 @@ body {
   top: -20%;
   bottom: -20%;
   width: 34%;
-  pointer-events: none;
   background: linear-gradient(100deg, transparent 0%, rgba(191, 224, 255, 0.28) 45%, rgba(255, 255, 255, 0.5) 50%, rgba(191, 224, 255, 0.28) 55%, transparent 100%);
   transform: translateX(-160%) skewX(-18deg);
   animation: promo-shine 2.6s ease-in-out 0.35s infinite;
 }
 @keyframes promo-travel {
-  from { transform: translate3d(112vw, 0, 0); }
-  to   { transform: translate3d(-112vw, 0, 0); }
+  0% {
+    transform: translate(-50%, 110vh);
+  }
+
+  20% {
+    transform: translate(-50%, 75vh);
+  }
+
+  60% {
+    transform: translate(-50%, 75vh);
+  }
+
+  100% {
+    transform: translate(-50%, -100vh);
+  }
 }
 @keyframes promo-shine {
   0%   { transform: translateX(-170%) skewX(-18deg); opacity: 0; }

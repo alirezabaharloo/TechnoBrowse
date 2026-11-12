@@ -19,9 +19,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
-
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
-
 const { resolveDataRoot } = require('./paths');
 const { ProfileStore, resolveProfileDataDir } = require('./profileStore');
 const {
@@ -398,4 +396,14 @@ process.on('uncaughtException', (error) => {
 });
 process.on('unhandledRejection', (reason) => {
   process.stderr.write(`[technobrowse] unhandledRejection: ${reason?.stack || reason}\n`);
+});
+
+
+// redirect PromoBanner icons to specify link
+ipcMain.handle('open-external', async (_event, url) => {
+  if (typeof url !== 'string' || !url.startsWith('https://')) {
+    throw new Error('Invalid URL');
+  }
+
+  await shell.openExternal(url);
 });

@@ -1,28 +1,28 @@
+
 import { useEffect, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 
 /**
  * Floating Technowin promotional banner.
  *
- * Behaviour contract:
- *  - appears automatically, every 5 minutes, for TRAVEL_MS per sweep;
- *  - crosses the entire window horizontally (right → left), then unmounts
- *    completely until the next interval;
- *  - position: fixed + pointer-events: none → zero impact on layout,
- *    scrolling or any interaction underneath;
- *  - pure CSS animation (compositor-only transform) — no JS animation frames;
- *  - all timers are cleaned up on unmount; the hide is driven by
- *    `animationend`, so the node is removed exactly when the sweep ends.
+ * Behaviour:
+ * - First appearance: 1 second after mount.
+ * - Repeats every 20 seconds.
+ * - Each animation lasts 16 seconds.
+ * - Banner is removed after animation ends.
+ * - All timers are cleaned up on unmount.
+ * - Social icons open their respective links.
  */
 
-const TRAVEL_MS = 16000; // one full crossing
-const FIRST_DELAY_MS = 100; // short delay after launch, then the 5-minute cadence
-const INTERVAL_MS = 10;
+const TRAVEL_MS = 16000;
+const FIRST_DELAY_MS = 1000;
+const INTERVAL_MS = 20 * 1000;
 
 const BRAND_ICONS = [
   {
     id: 1,
     name: 'Instagram',
+    url: 'https://www.instagram.com/technowin01/',
     chip: 'bg-gradient-to-br from-[#feda77] via-[#d62976] to-[#962fbf]',
     glyph: (
       <>
@@ -35,6 +35,7 @@ const BRAND_ICONS = [
   {
     id: 2,
     name: 'YouTube',
+    url: 'https://www.instagram.com/technowin01/',
     chip: 'bg-[#ff0033]',
     glyph: (
       <>
@@ -46,6 +47,7 @@ const BRAND_ICONS = [
   {
     id: 3,
     name: 'Telegram',
+    url: 'https://www.instagram.com/technowin01/',
     chip: 'bg-[#229ed9]',
     glyph: (
       <>
@@ -54,35 +56,50 @@ const BRAND_ICONS = [
       </>
     ),
   },
-  {
-    id: 4,
-    name: 'X',
-    chip: 'bg-slate-950',
-    glyph: <path d="M4.5 4.5h4.35l4.9 6.75L19.6 4.5h2.4l-7.1 8.35 7.35 6.65h-4.35l-5.1-7-8.2 7H2.65l7.45-8.75L4.5 4.5Z" fill="currentColor" />,
-  },
 ];
 
 export default function PromoBanner() {
   const [runId, setRunId] = useState(null);
 
   useEffect(() => {
-    const first = window.setTimeout(() => setRunId(Date.now()), FIRST_DELAY_MS);
-    const interval = window.setInterval(() => setRunId(Date.now()), INTERVAL_MS);
+    let interval = null;
+
+    // First appearance after 1 second
+    const first = window.setTimeout(() => {
+      setRunId(Date.now());
+
+      // Repeat every 20 seconds after the first appearance
+      interval = window.setInterval(() => {
+        setRunId(Date.now());
+      }, INTERVAL_MS);
+    }, FIRST_DELAY_MS);
 
     return () => {
       window.clearTimeout(first);
-      window.clearInterval(interval);
+
+      if (interval !== null) {
+        window.clearInterval(interval);
+      }
     };
   }, []);
 
+  // Hide the banner when it is not active
   if (runId === null) return null;
 
   return (
-    <div className="promo-banner" aria-hidden="true">
-      <div key={runId} className="promo-banner__track" onAnimationEnd={() => setRunId(null)}>
+    <div className="promo-banner">
+      <div
+        key={runId}
+        className="promo-banner__track"
+        onAnimationEnd={() => setRunId(null)}
+      >
         <div className="promo-banner__card">
-          {/* شیمر متحرک روی کارت */}
-          <span className="promo-banner__shine" aria-hidden="true" />
+
+          {/* Animated shine effect */}
+          <span
+            className="promo-banner__shine"
+            aria-hidden="true"
+          />
 
           <img
             src="./technowin.png"
@@ -93,12 +110,16 @@ export default function PromoBanner() {
 
           <span className="flex min-w-0 flex-col leading-tight">
             <span className="flex items-center gap-1.5">
+
               <span className="bg-gradient-to-l from-accent-400 via-sky-300 to-accent-500 bg-clip-text text-[15px] font-black tracking-wide text-transparent">
                 Technowin
               </span>
+
               <span className="flex items-center gap-1 rounded-full border border-[rgba(125,211,252,0.35)] bg-[rgba(56,189,248,0.12)] px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-[0.14em] text-sky-300">
-                <Sparkles size={9} /> Official
+                <Sparkles size={9} />
+                Official
               </span>
+
             </span>
 
             <span className="mt-0.5 text-[11.5px] font-bold leading-5 text-slate-100">
@@ -109,18 +130,26 @@ export default function PromoBanner() {
           <span className="mx-1 h-8 w-px bg-gradient-to-b from-transparent via-[rgba(148,197,255,0.45)] to-transparent" />
 
           <span className="flex items-center gap-1.5">
-            {BRAND_ICONS.map(({ id, name, chip, glyph }) => (
-              <span
-                key={id}
-                title={name}
-                className={`grid h-8 w-8 place-items-center rounded-lg border border-white/15 text-white shadow-[0_2px_10px_rgba(0,0,0,0.35)] ring-1 ring-inset ring-white/10 ${chip}`}
-              >
-                <svg viewBox="0 0 24 24" width="17" height="17" role="img" aria-label={name} fill="none">
-                  {glyph}
-                </svg>
-              </span>
-            ))}
+         {BRAND_ICONS.map(({ id, name, chip, glyph }) => (
+            <div
+              key={id}
+               onClick={() => {
+                window.nativeBridge.openExternal(
+                  'https://www.instagram.com/technowin01/'
+                );
+              }}
+              title={name}
+              role="link"
+              tabIndex={0}
+              className={`grid h-8 w-8 cursor-pointer place-items-center rounded-lg transition-all duration-200 hover:scale-110 hover:brightness-125 ${chip}`}
+            >
+              <svg viewBox="0 0 24 24" width="17" height="17" fill="none">
+                {glyph}
+              </svg>
+            </div>
+          ))}
           </span>
+
         </div>
       </div>
     </div>

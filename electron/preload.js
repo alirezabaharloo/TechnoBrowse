@@ -11,6 +11,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 const invoke = (channel, payload) => ipcRenderer.invoke(channel, payload);
 
 contextBridge.exposeInMainWorld('technobrowse', {
+  /** Open Specify link. */
+  openExternal: (url) => ipcRenderer.invoke('open-external', url),
   /** @returns {Promise<Array<Profile & {isRunning: boolean}>>} */
   listProfiles: () => invoke('profiles:list'),
   /** @returns {Promise<Profile>} */
@@ -40,4 +42,5 @@ contextBridge.exposeInMainWorld('technobrowse', {
     ipcRenderer.on('profiles:changed', listener);
     return () => ipcRenderer.removeListener('profiles:changed', listener);
   },
+ 
 });
