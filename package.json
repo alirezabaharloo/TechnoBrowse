@@ -9,7 +9,6 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "build": "vite build",
-    "preview": "vite preview",
     "start": "npm run build && electron .",
     "test": "node scripts/test-store.mjs",
     "smoke": "node scripts/smoke-main.cjs",

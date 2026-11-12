@@ -7,11 +7,11 @@ import { Sparkles } from 'lucide-react';
  *
  * Behaviour:
  * - First appearance: 1 second after mount.
- * - Repeats every 20 seconds.
+ * - Repeats every 10 minutes (INTERVAL_MS).
  * - Each animation lasts 16 seconds.
  * - Banner is removed after animation ends.
  * - All timers are cleaned up on unmount.
- * - Social icons open their respective links.
+ * - Social icons open their (desktop) links via the preload bridge.
  */
 
 const TRAVEL_MS = 16000;
@@ -130,13 +130,11 @@ export default function PromoBanner() {
           <span className="mx-1 h-8 w-px bg-gradient-to-b from-transparent via-[rgba(148,197,255,0.45)] to-transparent" />
 
           <span className="flex items-center gap-1.5">
-         {BRAND_ICONS.map(({ id, name, chip, glyph }) => (
+         {BRAND_ICONS.map(({ id, name, url, chip, glyph }) => (
             <div
               key={id}
                onClick={() => {
-                window.nativeBridge.openExternal(
-                  'https://www.instagram.com/technowin01/'
-                );
+                window.technobrowse?.openExternal?.(url);
               }}
               title={name}
               role="link"
