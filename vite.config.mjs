@@ -18,10 +18,4 @@ export default defineConfig({
     strictPort: true,
     host: '127.0.0.1',
   },
-  preview: {
-    port: 4173,
-    strictPort: true,
-    host: '0.0.0.0',
-    allowedHosts: true, // static preview behind the Arena sandbox proxy
-  },
 });
