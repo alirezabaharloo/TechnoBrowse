@@ -16,11 +16,12 @@ import { Sparkles } from 'lucide-react';
  */
 
 const TRAVEL_MS = 16000; // one full crossing
-const FIRST_DELAY_MS = 2500; // short delay after launch, then the 5-minute cadence
-const INTERVAL_MS = 5 * 60 * 1000;
+const FIRST_DELAY_MS = 100; // short delay after launch, then the 5-minute cadence
+const INTERVAL_MS = 10;
 
 const BRAND_ICONS = [
   {
+    id: 1,
     name: 'Instagram',
     chip: 'bg-gradient-to-br from-[#feda77] via-[#d62976] to-[#962fbf]',
     glyph: (
@@ -32,6 +33,7 @@ const BRAND_ICONS = [
     ),
   },
   {
+    id: 2,
     name: 'YouTube',
     chip: 'bg-[#ff0033]',
     glyph: (
@@ -42,6 +44,7 @@ const BRAND_ICONS = [
     ),
   },
   {
+    id: 3,
     name: 'Telegram',
     chip: 'bg-[#229ed9]',
     glyph: (
@@ -52,6 +55,7 @@ const BRAND_ICONS = [
     ),
   },
   {
+    id: 4,
     name: 'X',
     chip: 'bg-slate-950',
     glyph: <path d="M4.5 4.5h4.35l4.9 6.75L19.6 4.5h2.4l-7.1 8.35 7.35 6.65h-4.35l-5.1-7-8.2 7H2.65l7.45-8.75L4.5 4.5Z" fill="currentColor" />,
@@ -64,6 +68,7 @@ export default function PromoBanner() {
   useEffect(() => {
     const first = window.setTimeout(() => setRunId(Date.now()), FIRST_DELAY_MS);
     const interval = window.setInterval(() => setRunId(Date.now()), INTERVAL_MS);
+
     return () => {
       window.clearTimeout(first);
       window.clearInterval(interval);
@@ -95,17 +100,18 @@ export default function PromoBanner() {
                 <Sparkles size={9} /> Official
               </span>
             </span>
+
             <span className="mt-0.5 text-[11.5px] font-bold leading-5 text-slate-100">
-              Technowin رو در فضای مجازی دنبال کنید
+              TechnoWin رو توی شبکه‌های اجتماعی دنبال کن
             </span>
           </span>
 
           <span className="mx-1 h-8 w-px bg-gradient-to-b from-transparent via-[rgba(148,197,255,0.45)] to-transparent" />
 
           <span className="flex items-center gap-1.5">
-            {BRAND_ICONS.map(({ name, chip, glyph }) => (
+            {BRAND_ICONS.map(({ id, name, chip, glyph }) => (
               <span
-                key={name}
+                key={id}
                 title={name}
                 className={`grid h-8 w-8 place-items-center rounded-lg border border-white/15 text-white shadow-[0_2px_10px_rgba(0,0,0,0.35)] ring-1 ring-inset ring-white/10 ${chip}`}
               >

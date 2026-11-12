@@ -43,6 +43,10 @@ export function limitElapsed(startMs, nowMs = Date.now()) {
   const elapsedMinutes = Math.max(0, Math.floor((now - start) / 60000));
   const hours = Math.floor(elapsedMinutes / 60);
   const minutes = elapsedMinutes % 60;
+  if (hours == 0 && minutes == 0){
+    return `چند ثانیه`
+  }
+
   if (hours === 0) return `${faDigits(minutes)} دقیقه`;
   return `${faDigits(hours)} ساعت و ${faDigits(minutes)} دقیقه`;
 }
