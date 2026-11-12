@@ -39,8 +39,13 @@ if (!gotLock) {
   process.exit(0);
 }
 
-const IS_DEV = !app.isPackaged;
-const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || 'http://127.0.0.1:5173';
+// Dev mode is OPT-IN, decided by the launcher — not by app.isPackaged.
+//   npm run dev → scripts/dev.mjs waits for Vite, then sets VITE_DEV_SERVER_URL
+//   npm start   → plain `electron .` after `vite build`; no dev server exists,
+//                 so the production bundle from dist/ must be loaded via loadFile
+//   packaged     → app.isPackaged; production as well
+const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || null;
+const IS_DEV = DEV_SERVER_URL !== null;
 const DIST_DIR = path.join(__dirname, '..', 'dist');
 
 const APP_ICON = (() => {
@@ -149,7 +154,16 @@ function createDashboardWindow() {
   if (IS_DEV) {
     win.loadURL(`${DEV_SERVER_URL}/index.html`);
   } else {
-    win.loadFile(path.join(DIST_DIR, 'index.html'));
+    const indexFile = path.join(DIST_DIR, 'index.html');
+
+    if (!fs.existsSync(indexFile)) {
+      process.stderr.write(
+        '[technobrowse] dist/index.html not found — run `npm run build` first ' +
+          '(`npm start` does this automatically).\n'
+      );
+    }
+
+    win.loadFile(indexFile);
   }
   return win;
 }
