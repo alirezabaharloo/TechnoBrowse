@@ -7,48 +7,8 @@ import Footer from './components/Footer';
 import ModalLayer from './components/ModalLayer';
 import PromoBanner from './components/PromoBanner';
 
-const HOUR = 3600000;
-const DAY = 86400000;
-
-const DEMO_PROFILES = [
-  {
-    id: 'demo8f3a1b2c4d5e',
-    name: 'حساب کاری',
-    email: 'alex@work.com',
-    color: 'blue',
-    createdAt: new Date(Date.now() - 40 * DAY).toISOString(),
-    lastOpenedAt: new Date(Date.now() - 5 * HOUR).toISOString(),
-    directory: 'profiles/profile-demo8f3a1b2c4d5e',
-    isRunning: false,
-    aiLimitReachedAt: null,
-  },
-  {
-    id: 'demo1c2d3e4f5a6b',
-    name: 'شخصی',
-    email: 'alex.personal@gmail.com',
-    color: 'emerald',
-    createdAt: new Date(Date.now() - 21 * DAY).toISOString(),
-    lastOpenedAt: new Date(Date.now() - 2 * DAY).toISOString(),
-    directory: 'profiles/profile-demo1c2d3e4f5a6b',
-    isRunning: false,
-    aiLimitReachedAt: Date.now() - (3 * HOUR + 25 * 60000),
-  },
-  {
-    id: 'demo9a8b7c6d5e4f',
-    name: 'پروژهٔ مشتری',
-    email: '',
-    color: 'amber',
-    createdAt: new Date(Date.now() - 6 * DAY).toISOString(),
-    lastOpenedAt: null,
-    directory: 'profiles/profile-demo9a8b7c6d5e4f',
-    isRunning: false,
-    aiLimitReachedAt: null,
-  },
-];
-
 export default function App() {
   const api = useMemo(() => nativeBridge(), []);
-  const demoMode = !api;
 
   const [profiles, setProfiles] = useState([]);
   const [info, setInfo] = useState(null);
@@ -89,23 +49,23 @@ export default function App() {
     let mounted = true;
 
     (async () => {
+      if (!api) {
+        if (mounted) setLoading(false);
+        return;
+      }
+
       try {
-        if (api) {
-          const [list, appInfo, chrome] = await Promise.all([
-            api.listProfiles(),
-            api.getAppInfo(),
-            api.getChromeStatus(),
-          ]);
+        const [list, appInfo, chrome] = await Promise.all([
+          api.listProfiles(),
+          api.getAppInfo(),
+          api.getChromeStatus(),
+        ]);
 
-          if (!mounted) return;
+        if (!mounted) return;
 
-          setProfiles(list);
-          setInfo(appInfo);
-          setChromeStatus(chrome);
-        } else {
-          setProfiles(DEMO_PROFILES);
-          setChromeStatus({ found: true, source: 'demo' });
-        }
+        setProfiles(list);
+        setInfo(appInfo);
+        setChromeStatus(chrome);
       } catch (error) {
         pushToast(
           error?.message || 'گرفتن فهرست حساب‌ها با مشکل روبه‌رو شد.',
@@ -131,25 +91,7 @@ export default function App() {
   }, [api, pushToast, refresh]);
 
   const handleCreate = async ({ name, email }) => {
-    if (demoMode) {
-      const id = `demo${Math.random().toString(16).slice(2, 16)}`;
-
-      const demo = {
-        id,
-        name,
-        email,
-        color: 'violet',
-        createdAt: new Date().toISOString(),
-        lastOpenedAt: null,
-        directory: `profiles/profile-${id}`,
-        isRunning: false,
-        aiLimitReachedAt: null,
-      };
-
-      setProfiles((list) => [demo, ...list]);
-      pushToast(`حساب «${name}» ساخته شد (حالت نمایشی).`);
-      return;
-    }
+    if (!api) return;
 
     await api.createProfile({ name, email });
     await refresh();
@@ -158,20 +100,11 @@ export default function App() {
   };
 
   const handleEdit = async ({ name, email }) => {
+    if (!api) return;
+
     const target = modal?.profile;
 
     if (!target) return;
-
-    if (demoMode) {
-      setProfiles((list) =>
-        list.map((p) =>
-          p.id === target.id ? { ...p, name, email } : p
-        )
-      );
-
-      pushToast('اطلاعات حساب تغییر کرد (حالت نمایشی).');
-      return;
-    }
 
     await api.updateProfile(target.id, { name, email });
     await refresh();
@@ -180,14 +113,7 @@ export default function App() {
   };
 
   const handleDelete = async (target) => {
-    if (demoMode) {
-      setProfiles((list) =>
-        list.filter((p) => p.id !== target.id)
-      );
-
-      pushToast(`حساب «${target.name}» حذف شد (حالت نمایشی).`);
-      return;
-    }
+    if (!api) return;
 
     try {
       await api.deleteProfile(target.id);
@@ -203,27 +129,7 @@ export default function App() {
   };
 
   const handleToggleAiLimit = async (profile, enabled) => {
-    if (demoMode) {
-      setProfiles((list) =>
-        list.map((p) =>
-          p.id === profile.id
-            ? {
-                ...p,
-                aiLimitReachedAt: enabled ? Date.now() : null,
-              }
-            : p
-        )
-      );
-
-      pushToast(
-        enabled
-          ? `محدودیت استفاده از هوش مصنوعی برای «${profile.name}» ثبت شد.`
-          : `محدودیت استفاده از هوش مصنوعی برای «${profile.name}» برداشته شد.`,
-        'info'
-      );
-
-      return;
-    }
+    if (!api) return;
 
     try {
       await api.setProfileAiLimit(profile.id, enabled);
@@ -244,13 +150,7 @@ export default function App() {
   };
 
   const handleOpen = async (profile) => {
-    if (demoMode) {
-      pushToast(
-        'برای باز کردن حساب‌ها، اول برنامهٔ دسکتاپ رو اجرا کن.',
-        'info'
-      );
-      return;
-    }
+    if (!api) return;
 
     setOpeningId(profile.id);
 
@@ -328,6 +228,12 @@ export default function App() {
     }
   };
 
+  // TechnoBrowse is a desktop-only Electron app. Without the preload bridge
+  // there is nothing safe to fall back to — fail loudly, never silently.
+  if (!api) {
+    return <BridgeRequired />;
+  }
+
   return (
     <div className="app-backdrop relative flex h-full flex-col overflow-hidden">
       <div className="app-grid pointer-events-none absolute inset-0" />
@@ -368,6 +274,47 @@ export default function App() {
         toasts={toasts}
         dismissToast={dismissToast}
       />
+    </div>
+  );
+}
+
+/**
+ * Rendered when window.technobrowse (the Electron preload bridge) is missing —
+ * i.e. someone opened the page in a plain browser. Deliberately NOT a demo
+ * mode: no fake data, no simulated actions, just a clear explanation.
+ */
+function BridgeRequired() {
+  return (
+    <div className="app-backdrop relative flex h-full flex-col items-center justify-center overflow-hidden px-6 text-center">
+      <div className="app-grid pointer-events-none absolute inset-0" />
+
+      <img
+        src="./technowin.png"
+        alt="لوگوی TechnoBrowse"
+        className="relative h-20 w-20 select-none rounded-2xl shadow-[0_16px_40px_rgba(15,23,42,0.35)]"
+        draggable={false}
+      />
+
+      <h1 className="relative mt-6 text-2xl font-extrabold text-slate-100">
+        اتصال به هستهٔ TechnoBrowse برقرار نشد
+      </h1>
+
+      <p className="relative mt-3 max-w-md text-[13px] leading-7 text-slate-400">
+        TechnoBrowse فقط داخل اپلیکیشن دسکتاپش اجرا می‌شه و نسخهٔ تحت وب نداره. اگر این صفحه رو در مرورگر معمولی باز کرده‌ای، همون فایل رو ببند و برنامهٔ TechnoBrowse رو اجرا کن.
+      </p>
+
+      <p className="relative mt-2 max-w-md text-[12px] leading-6 text-slate-500">
+        اگر داخل خودِ اپ دسکتاپ این پیام رو می‌بینی، یعنی preload bridge بارگذاری نشده — پس نصب یا بیلد برنامه مشکل داره و باید دوباره نصب بشه.
+      </p>
+
+      <button
+        onClick={() => window.location.reload()}
+        className="relative mt-6 flex h-11 items-center gap-2 rounded-xl bg-gradient-to-br from-accent-600 to-accent-500 px-6
+          text-[14px] font-bold text-white shadow-[0_8px_24px_rgba(37,99,235,0.35)]
+          transition hover:from-accent-500 hover:to-accent-400 active:scale-[0.98]"
+      >
+        دوباره تلاش کن
+      </button>
     </div>
   );
 }

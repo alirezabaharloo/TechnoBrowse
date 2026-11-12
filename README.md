@@ -46,8 +46,7 @@ npm start       # vite build + electron .
 | `npm run render-check` | Server-renders the React dashboard to catch render-time crashes |
 | `npm run dom-check` | Drives the dashboard UI with jsdom — create/validate/delete flow end-to-end |
 | `npm run check` | Runs every check above plus a production build |
-| `npm run preview` | Serve the production build on port 4173 (demo mode in plain browsers) |
-| `npm run visual-check` | Screenshot the dashboard with headless Chromium (needs `npm run preview` running) |
+| `npm run visual-check` | Build first, then headless screenshots — serves `dist/` itself with a mocked desktop bridge |
 | `npm run dist` | **Build the Windows x64 portable executable** into `release/` |
 | `npm run dist:dir` | Build an unpacked Windows app directory (faster, for debugging) |
 
@@ -151,7 +150,7 @@ TechnoBrowse/
 │   ├── smoke-main.cjs         ← main-process integration tests (stubbed electron + spawn)
 │   ├── render-check.mjs       ← SSR render smoke check
 │   ├── dom-check.mjs          ← jsdom end-to-end flow for the dashboard
-│   └── visual-check.mjs       ← headless screenshots of the dashboard
+│   └── visual-check.mjs       ← headless screenshots (serves dist/ + mocked desktop bridge)
 ├── build/icon.png             ← app icon (1024×1024)
 ├── electron-builder.yml       ← Windows x64 portable target
 └── .github/workflows/windows-portable.yml
@@ -187,7 +186,7 @@ TechnoBrowse/
 | `npm run dist` (Windows portable `.exe`) | ⚠️ run on Windows or via the Actions workflow — the Electron binary host is unreachable from the build sandbox used here |
 | Manual Tests 1–6 (isolation, persistence, restart, delete protection, missing-Chrome UX) | ⚠️ run on Windows before release |
 
-`npm run preview` serves the built app on port 4173 — in a normal browser the dashboard runs in a sandboxed **preview/demo mode** (profile actions are simulated); launching real Chrome exists only inside the Electron app.
+TechnoBrowse is **desktop-only**. Opening the built page in a plain browser does not start a demo: the dashboard shows a clear initialization error (`window.technobrowse` preload bridge missing). All profile actions run through the real Electron IPC bridge inside the desktop app; `scripts/dom-check.mjs` and `scripts/visual-check.mjs` exercise the same UI against an in-memory mock of that bridge.
 
 ## Troubleshooting
 

@@ -75,7 +75,12 @@ export function formatDate(iso) {
   return date.toLocaleDateString('fa-IR', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-/** Bridge to the Electron preload API, or null when running in a plain browser. */
+/**
+ * Bridge to the Electron preload API (window.technobrowse).
+ * Returns null only when the preload bridge is unavailable — the app treats
+ * that as a hard initialization failure and shows a clear error (there is no
+ * web/demo fallback).
+ */
 export function nativeBridge() {
   return typeof window !== 'undefined' && window.technobrowse ? window.technobrowse : null;
 }

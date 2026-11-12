@@ -1,7 +1,13 @@
 /**
- * DOM smoke checks for the dashboard (demo mode — no Electron required).
- * Drives the real UI with jsdom: create → validation error → successful create →
- * delete flow. Catches wiring mistakes that SSR can't (events, state, effects).
+ * DOM smoke checks for the dashboard.
+ * Drives the real UI with jsdom: empty state → create → validation error →
+ * successful create → delete flow. Catches wiring mistakes that SSR can't
+ * (events, state, effects).
+ *
+ * There is no web/demo fallback in the app under test: it requires the
+ * Electron preload bridge (window.technobrowse). These checks install a small
+ * in-memory mock of that exact IPC surface (same methods, same shapes) so the
+ * real renderer runs against a deterministic fake backend.
  * Run: npm run dom-check
  */
 import { JSDOM } from 'jsdom';
@@ -37,7 +43,73 @@ window.ResizeObserver = globalThis.ResizeObserver;
 // React decides its input-event strategy at import time; make sure it sees a DOM.
 Object.defineProperty(window.document, 'oninput', { value: null, configurable: true });
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-// No window.technobrowse on purpose → the dashboard runs in demo mode.
+
+// ── In-memory mock of the Electron preload bridge (window.technobrowse) ───────
+{
+  const FAKE_DATA_ROOT = 'C:\\Users\\sample\\AppData\\Roaming\\TechnoBrowse';
+  const mockProfiles = [];
+  let seq = 0;
+  const clone = (p) => ({ ...p });
+  const pickColor = () => ['violet', 'blue', 'emerald', 'amber'][seq % 4];
+
+  window.technobrowse = {
+    openExternal: async () => {},
+    listProfiles: async () => mockProfiles.map(clone),
+    getAppInfo: async () => ({
+      version: '2.0.0',
+      dataRoot: FAKE_DATA_ROOT,
+      portable: false,
+      profileCount: mockProfiles.length,
+      chromeFound: true,
+    }),
+    getChromeStatus: async () => ({
+      found: true,
+      executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+      source: 'mock',
+    }),
+    refreshChromeStatus: async () => window.technobrowse.getChromeStatus(),
+    createProfile: async ({ name, email }) => {
+      seq += 1;
+      const id = `mock${String(seq).padStart(4, '0')}${'abcdef'.slice(0, 6)}`.slice(0, 18).padEnd(18, '0');
+      const profile = {
+        id,
+        name,
+        email,
+        color: pickColor(),
+        createdAt: new Date().toISOString(),
+        lastOpenedAt: null,
+        directory: `profiles/profile-${id}`,
+        isRunning: false,
+        aiLimitReachedAt: null,
+      };
+      mockProfiles.unshift(profile);
+      return clone(profile);
+    },
+    updateProfile: async (id, { name, email }) => {
+      const target = mockProfiles.find((p) => p.id === id);
+      if (!target) throw new Error('پروفایل یافت نشد.');
+      target.name = name;
+      target.email = email;
+      return clone(target);
+    },
+    setProfileAiLimit: async (id, enabled) => {
+      const target = mockProfiles.find((p) => p.id === id);
+      if (!target) throw new Error('پروفایل یافت نشد.');
+      target.aiLimitReachedAt = enabled ? Date.now() : null;
+      return clone(target);
+    },
+    deleteProfile: async (id) => {
+      const index = mockProfiles.findIndex((p) => p.id === id);
+      if (index === -1) throw new Error('پروفایل یافت نشد.');
+      mockProfiles.splice(index, 1);
+      return { ok: true };
+    },
+    openProfile: async () => ({ ok: true, reused: false }),
+    openChromeDownload: async () => ({ ok: true }),
+    openDataRoot: async () => ({ ok: true }),
+    onProfilesChanged: () => () => {},
+  };
+}
 
 const React = await import('react');
 const { act } = React;
@@ -77,7 +149,7 @@ const setInput = async (element, value) => {
 const findByText = (selector, snippet) =>
   Array.from(document.querySelectorAll(selector)).find((el) => el.textContent?.includes(snippet));
 
-check('داشبورد پروفایل‌های نمونه را نشان می‌دهد', text().includes('حساب کاری') && text().includes('شخصی'));
+check('با نبود پروفایل، حالت خالی داشبورد نشان داده می‌شود', text().includes('هنوز هیچ حسابی نساختی'));
 
 const createButtons = Array.from(document.querySelectorAll('button')).filter((b) =>
   b.textContent.includes('ایجاد پروفایل جدید')
@@ -96,7 +168,7 @@ check('دکمهٔ ثبت تا وارد کردن نام غیرفعال است', s
 
 // Type a name and confirm enabled
 const nameInput = document.querySelector('#profile-name');
-await setInput(nameInput, 'پروفایل تازهٔ من');
+await setInput(nameInput, 'حساب تازهٔ من');
 check('دکمهٔ ثبت بعد از وارد کردن نام فعال می‌شود', submitButton.disabled === false);
 
 // Create it
@@ -104,20 +176,20 @@ await click(submitButton);
 await act(async () => {
   await new Promise((resolve) => setTimeout(resolve, 30));
 });
-check('پروفایل جدید در شبکه ظاهر می‌شود', text().includes('پروفایل تازهٔ من'));
+check('پروفایل جدید در شبکه ظاهر می‌شود', text().includes('حساب تازهٔ من'));
 
 // Open the delete dialog for the new profile and cancel it
-const card = Array.from(document.querySelectorAll('article')).find((el) => el.textContent.includes('پروفایل تازهٔ من'));
+const card = Array.from(document.querySelectorAll('article')).find((el) => el.textContent.includes('حساب تازهٔ من'));
 const deleteButton = card?.querySelector('button[aria-label^="حذف"]');
 await click(deleteButton);
 check('دیالوگ حذف با فهرست پیامدها باز می‌شود', text().includes('کوکی‌ها و نشست‌های ورود'));
 
 const cancelButton = Array.from(document.querySelectorAll('button')).find((b) => b.textContent.trim() === 'انصراف');
 await click(cancelButton);
-check('با انصراف دیالوگ بسته می‌شود و پروفایل می‌ماند', text().includes('پروفایل تازهٔ من'));
+check('با انصراف دیالوگ بسته می‌شود و پروفایل می‌ماند', text().includes('حساب تازهٔ من'));
 
 // Confirm deletion for real (re-query: React re-rendered since we grabbed references)
-const card2 = Array.from(document.querySelectorAll('article')).find((el) => el.textContent.includes('پروفایل تازهٔ من'));
+const card2 = Array.from(document.querySelectorAll('article')).find((el) => el.textContent.includes('حساب تازهٔ من'));
 const deleteButton2 = card2?.querySelector('button[aria-label^="حذف"]');
 await click(deleteButton2);
 const confirmButton = Array.from(document.querySelectorAll('button')).find((b) =>
@@ -128,7 +200,7 @@ await act(async () => {
   await new Promise((resolve) => setTimeout(resolve, 30));
 });
 const remainingCards = Array.from(document.querySelectorAll('article')).filter((el) =>
-  el.textContent.includes('پروفایل تازهٔ من')
+  el.textContent.includes('حساب تازهٔ من')
 );
 check('بعد از حذف تأییدشده پروفایل حذف می‌شود', remainingCards.length === 0);
 
