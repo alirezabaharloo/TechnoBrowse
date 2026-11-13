@@ -39,8 +39,8 @@ if (!gotLock) {
   process.exit(0);
 }
 
-const IS_DEV = !app.isPackaged;
-const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || 'http://127.0.0.1:5173';
+const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL;
+const IS_DEV = Boolean(DEV_SERVER_URL);
 const DIST_DIR = path.join(__dirname, '..', 'dist');
 
 const APP_ICON = (() => {
