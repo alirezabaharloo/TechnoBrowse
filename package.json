@@ -2,7 +2,7 @@
   "name": "technobrowse",
   "productName": "TechnoBrowse",
   "version": "2.0.0",
-  "description": "TechnoBrowse — a lightweight multi-profile desktop browser. Every profile is a completely isolated, persistent browser environment.",
+  "description": "TechnoBrowse — a lightweight multi-profile desktop manager for Google Chrome. Every profile is a completely isolated, persistent browser environment.",
   "author": "TechnoBrowse",
   "license": "MIT",
   "main": "electron/main.js",
